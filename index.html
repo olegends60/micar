@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sistema Punto de Venta e Inventario</title>
 
-  <!-- TailWind CSS para diseño adaptativo -->
+  <!-- TailWind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Generador de PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -33,26 +33,38 @@
     <!-- SECCIÓN 1: CAJA / TERMINAL DE VENTAS -->
     <section id="tab-ventas" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
       
-      <!-- Panel de Selección de Productos -->
+      <!-- Panel de Selección e Ingreso de Productos -->
       <div class="lg:col-span-2 bg-white p-4 sm:p-5 rounded-lg shadow space-y-4">
         
-        <!-- Calculadora Manual ($ a Litros O Litros Directos) -->
-        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg space-y-2">
-          <span class="text-xs font-bold text-amber-900 block">💡 Calculadora de Ventas (Pesos o Litros):</span>
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-            <select id="calc-modo" class="border p-2 rounded text-xs sm:text-sm font-semibold bg-white">
-              <option value="pesos">Por Dinero ($)</option>
-              <option value="litros">Por Litros (L)</option>
-            </select>
-            <input type="number" step="0.01" id="calc-monto" placeholder="Cantidad ($ o Litros)" class="border p-2 rounded text-sm w-full">
-            <select id="calc-producto" class="border p-2 rounded text-sm w-full bg-white"></select>
-            <button onclick="calcularYAgregarLíquido()" class="bg-amber-600 text-white p-2 rounded text-sm font-semibold hover:bg-amber-700 w-full">
-              ➕ Agregar a Caja
+        <!-- APARTADO 1 (ARRIBA): Venta por Dinero ($) con Redondeo a Litros Cerrados -->
+        <div class="bg-emerald-50 border border-emerald-200 p-3 sm:p-4 rounded-lg space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-bold text-emerald-900 block">💵 APARTADO 1: Venta por Dinero ($) [Redondea a Litros Cerrados]</span>
+          </div>
+          <p class="text-[11px] text-emerald-700">Calcula la cantidad solicitada en dinero y ajusta automáticamente al litro exacto hacia arriba.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-1">
+            <input type="number" step="0.01" id="monto-dinero" placeholder="Monto deseado ($)" class="border p-2 rounded text-sm w-full bg-white">
+            <select id="prod-dinero" class="border p-2 rounded text-sm w-full bg-white"></select>
+            <button onclick="agregarPorDineroRedondeado()" class="bg-emerald-700 text-white p-2 rounded text-sm font-bold hover:bg-emerald-800 w-full">
+              ➕ Cobrar por Dinero
             </button>
           </div>
         </div>
 
-        <!-- Botones de Productos Líquidos (Toque Rápido para 1L) -->
+        <!-- APARTADO 2 (ABAJO): Venta Directa por Litros (L) -->
+        <div class="bg-blue-50 border border-blue-200 p-3 sm:p-4 rounded-lg space-y-2">
+          <span class="text-xs sm:text-sm font-bold text-blue-900 block">🪣 APARTADO 2: Venta por Litros Directos (L)</span>
+          <p class="text-[11px] text-blue-700">Ingresa manualmente la cantidad exacta de litros que pide el cliente (ej: 10, 2.5, etc.).</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-1">
+            <input type="number" step="0.1" id="cant-litros" placeholder="Litros pedidos (ej: 10)" class="border p-2 rounded text-sm w-full bg-white">
+            <select id="prod-litros" class="border p-2 rounded text-sm w-full bg-white"></select>
+            <button onclick="agregarPorLitrosDirectos()" class="bg-blue-700 text-white p-2 rounded text-sm font-bold hover:bg-blue-800 w-full">
+              ➕ Agregar Litros
+            </button>
+          </div>
+        </div>
+
+        <!-- Toque Rápido (1 Litro) -->
         <div>
           <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Líquidos (Toque rápido para 1 Litro)</h3>
           <div id="grid-productos" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
@@ -64,9 +76,9 @@
           <div id="grid-promos" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
         </div>
 
-        <!-- Otros Productos (Piezas/Abarrotes) -->
+        <!-- Otros Productos -->
         <div>
-          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Otros Productos (Piezas)</h3>
+          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Otros Productos</h3>
           <div id="grid-otros" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
         </div>
       </div>
@@ -75,7 +87,7 @@
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow flex flex-col justify-between">
         <div>
           <h2 class="text-lg font-bold border-b pb-2 text-gray-800 mb-3">Cuenta Actual</h2>
-          <div id="carrito-items" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+          <div id="carrito-items" class="space-y-2 max-h-72 overflow-y-auto pr-1">
             <p class="text-xs text-gray-400 italic">No hay productos agregados.</p>
           </div>
         </div>
@@ -106,11 +118,11 @@
     <!-- SECCIÓN 2: INVENTARIO DE TAMBOS -->
     <section id="tab-inventario" class="hidden space-y-4 sm:space-y-6">
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
-        <h2 id="inv-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar Producto Líquido</h2>
+        <h2 id="inv-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar / Editar Producto Líquido</h2>
         <form onsubmit="guardarProducto(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
           <input type="hidden" id="prod-id">
           <div>
-            <label class="text-xs font-bold text-gray-600">Nombre:</label>
+            <label class="text-xs font-bold text-gray-600">Nombre del producto:</label>
             <input type="text" id="prod-nombre" placeholder="ej. Fabuloso" required class="border p-2 rounded w-full">
           </div>
           <div>
@@ -146,8 +158,8 @@
               <th class="p-2">Capacidad</th>
               <th class="p-2">Litros Actuales</th>
               <th class="p-2">Vendidos</th>
-              <th class="p-2">Precio/L</th>
-              <th class="p-2">Costo/L</th>
+              <th class="p-2">Precio Venta/L</th>
+              <th class="p-2">Costo Compra/L</th>
               <th class="p-2">Acciones</th>
             </tr>
           </thead>
@@ -160,49 +172,62 @@
     <section id="tab-promos" class="hidden space-y-4">
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
         <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Crear Combo / Promoción</h2>
-        <form onsubmit="guardarPromo(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <input type="text" id="promo-nombre" placeholder="Nombre del Combo" required class="border p-2 rounded">
-          <input type="number" step="0.01" id="promo-precio" placeholder="Precio Final ($)" required class="border p-2 rounded">
-          <input type="number" step="0.01" id="promo-costo" placeholder="Costo Estimado ($)" required class="border p-2 rounded">
-          <button type="submit" class="bg-blue-700 text-white font-bold py-2 rounded sm:col-span-3">Guardar Combo</button>
+        <form onsubmit="guardarPromo(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div>
+            <label class="text-xs font-bold text-gray-600">Nombre del Combo:</label>
+            <input type="text" id="promo-nombre" placeholder="ej. Paquete Inicio de Mes" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Productos que incluye:</label>
+            <input type="text" id="promo-desc" placeholder="ej. 1L Cloro + 1L Fabuloso + 1L Roma" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Precio de Venta Combo ($):</label>
+            <input type="number" step="0.01" id="promo-precio" placeholder="Precio promocional" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Costo Total Real ($):</label>
+            <input type="number" step="0.01" id="promo-costo" placeholder="Suma de costos reales" required class="border p-2 rounded w-full">
+          </div>
+          <button type="submit" class="bg-blue-700 text-white font-bold py-2 rounded sm:col-span-2">Guardar Combo / Promoción</button>
         </form>
       </div>
+
       <div class="bg-white p-4 rounded-lg shadow">
-        <h3 class="font-bold text-sm mb-2">Combos Registrados</h3>
+        <h3 class="font-bold text-sm mb-2">Combos y Promociones Guardados</h3>
         <div id="lista-promos-mng" class="space-y-2 text-xs"></div>
       </div>
     </section>
 
-    <!-- SECCIÓN 4: OTROS PRODUCTOS (Piezas sin costo) -->
+    <!-- SECCIÓN 4: OTROS PRODUCTOS (Sin control de piezas) -->
     <section id="tab-otros" class="hidden space-y-4">
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
-        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar Otro Producto (Piezas / Abarrotes)</h2>
+        <h2 id="otro-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar Otro Producto</h2>
         <form onsubmit="guardarOtro(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <input type="hidden" id="otro-id">
           <div>
-            <label class="text-xs font-bold text-gray-600">Nombre:</label>
+            <label class="text-xs font-bold text-gray-600">Nombre del Producto:</label>
             <input type="text" id="otro-nombre" placeholder="ej. Fibra verde, Jalador" required class="border p-2 rounded w-full">
           </div>
           <div>
             <label class="text-xs font-bold text-gray-600">Precio de Venta ($):</label>
-            <input type="number" step="0.01" id="otro-precio" placeholder="Precio al cliente" required class="border p-2 rounded w-full">
+            <input type="number" step="0.01" id="otro-precio" placeholder="Precio al público" required class="border p-2 rounded w-full">
           </div>
-          <div>
-            <label class="text-xs font-bold text-gray-600">Piezas Disponibles:</label>
-            <input type="number" id="otro-stock" placeholder="Cantidad actual" required class="border p-2 rounded w-full">
+          <div class="flex items-end gap-2">
+            <button type="submit" id="btn-save-otro" class="bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">Guardar Producto</button>
+            <button type="button" id="btn-cancel-otro" onclick="cancelarEdicionOtro()" class="bg-gray-400 text-white font-bold py-2 px-4 rounded hidden">Cancelar</button>
           </div>
-          <button type="submit" class="bg-blue-700 text-white font-bold py-2 rounded sm:col-span-3">Guardar Producto</button>
         </form>
       </div>
 
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow overflow-x-auto">
-        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Lista de Otros Productos</h2>
+        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Lista de Otros Productos Registrados</h2>
         <table class="w-full text-left text-xs sm:text-sm">
           <thead>
             <tr class="bg-gray-100 border-b">
-              <th class="p-2">Producto</th>
+              <th class="p-2">Nombre del Producto</th>
               <th class="p-2">Precio de Venta</th>
-              <th class="p-2">Piezas Disponibles</th>
-              <th class="p-2">Acción</th>
+              <th class="p-2">Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-otros"></tbody>
@@ -252,7 +277,7 @@
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', e => {
-          e.waitUntil(caches.open('app-v2').then(cache => cache.addAll(['./'])));
+          e.waitUntil(caches.open('app-v3').then(cache => cache.addAll(['./'])));
         });
         self.addEventListener('fetch', e => {
           e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
@@ -288,18 +313,23 @@
     }
 
     function renderVentas() {
+      const pDinero = document.getElementById('prod-dinero');
+      const pLitros = document.getElementById('prod-litros');
       const gP = document.getElementById('grid-productos');
-      const sC = document.getElementById('calc-producto');
-      gP.innerHTML = ''; sC.innerHTML = '';
+      
+      pDinero.innerHTML = ''; pLitros.innerHTML = ''; gP.innerHTML = '';
 
       productos.forEach(p => {
+        const option = `<option value="${p.id}">${p.nombre} ($${p.precio}/L)</option>`;
+        pDinero.innerHTML += option;
+        pLitros.innerHTML += option;
+
         gP.innerHTML += `
           <button onclick="agregarAlCarrito('${p.nombre}', ${p.precio}, ${p.costo}, '1 L', 1, ${p.id})" class="p-2 border rounded bg-blue-50 hover:bg-blue-100 text-left">
             <p class="font-bold text-xs">${p.nombre}</p>
             <p class="text-xs text-blue-700 font-semibold">$${p.precio}/L - Tambo: ${p.stock.toFixed(1)}L</p>
           </button>
         `;
-        sC.innerHTML += `<option value="${p.id}">${p.nombre} ($${p.precio}/L)</option>`;
       });
 
       const gPr = document.getElementById('grid-promos');
@@ -308,7 +338,8 @@
         gPr.innerHTML += `
           <button onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio}, ${pr.costo}, '1 Combo', 0, null)" class="p-2 border rounded bg-amber-50 hover:bg-amber-100 text-left">
             <p class="font-bold text-xs text-amber-900">${pr.nombre}</p>
-            <p class="text-xs text-amber-700 font-semibold">$${pr.precio}</p>
+            <p class="text-[10px] text-amber-800 italic">${pr.desc || ''}</p>
+            <p class="text-xs text-amber-700 font-semibold mt-1">$${pr.precio}</p>
           </button>
         `;
       });
@@ -317,48 +348,56 @@
       gOt.innerHTML = '';
       otros.forEach(o => {
         gOt.innerHTML += `
-          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio}, 0, '1 Pza', 0, null, true, ${o.id})" class="p-2 border rounded bg-gray-50 hover:bg-gray-100 text-left">
+          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio}, 0, '1 Pza', 0, null)" class="p-2 border rounded bg-gray-50 hover:bg-gray-100 text-left">
             <p class="font-bold text-xs">${o.nombre}</p>
-            <p class="text-xs text-gray-600">$${o.precio} (${o.stock} pzas)</p>
+            <p class="text-xs text-gray-600">$${o.precio}</p>
           </button>
         `;
       });
     }
 
-    // CALCULADORA MANUAL (Dinero o Litros directos)
-    function calcularYAgregarLíquido() {
-      const modo = document.getElementById('calc-modo').value;
-      const valor = parseFloat(document.getElementById('calc-monto').value);
-      const idP = parseInt(document.getElementById('calc-producto').value);
+    // APARTADO 1: VENTA POR DINERO CON REDONDEO A LITRO CERRADO
+    function agregarPorDineroRedondeado() {
+      const monto = parseFloat(document.getElementById('monto-dinero').value);
+      const idP = parseInt(document.getElementById('prod-dinero').value);
       const prod = productos.find(p => p.id === idP);
 
-      if (!valor || valor <= 0 || !prod) {
-        alert("Por favor ingresa una cantidad válida.");
+      if (!monto || monto <= 0 || !prod) {
+        alert("Por favor ingresa un monto válido.");
         return;
       }
 
-      let subtotal = 0;
-      let litros = 0;
+      // Cálculo exacto de litros y redondeo hacia el entero más cercano (arriba)
+      const litrosExactos = monto / prod.precio;
+      const litrosRedondeados = Math.ceil(litrosExactos);
+      const cobroFinal = litrosRedondeados * prod.precio;
+      const costoTotal = prod.costo * litrosRedondeados;
 
-      if (modo === 'pesos') {
-        subtotal = valor;
-        litros = valor / prod.precio;
-      } else {
-        litros = valor;
-        subtotal = valor * prod.precio;
-      }
-
-      const costoTotal = prod.costo * litros;
-      const cantTexto = `${parseFloat(litros.toFixed(2))} L`;
-
-      agregarAlCarrito(prod.nombre, subtotal, costoTotal, cantTexto, litros, prod.id);
-      document.getElementById('calc-monto').value = '';
+      agregarAlCarrito(prod.nombre, cobroFinal, costoTotal, `${litrosRedondeados} L`, litrosRedondeados, prod.id);
+      document.getElementById('monto-dinero').value = '';
     }
 
-    function agregarAlCarrito(nombre, subtotal, costo, cantTxt, litrosNum, prodId, esOtro = false, otroId = null) {
-      // Registrar HORA EXACTA del momento en que entra al carrito
+    // APARTADO 2: VENTA DIRECTA POR LITROS
+    function agregarPorLitrosDirectos() {
+      const litros = parseFloat(document.getElementById('cant-litros').value);
+      const idP = parseInt(document.getElementById('prod-litros').value);
+      const prod = productos.find(p => p.id === idP);
+
+      if (!litros || litros <= 0 || !prod) {
+        alert("Por favor ingresa una cantidad de litros válida.");
+        return;
+      }
+
+      const subtotal = litros * prod.precio;
+      const costoTotal = prod.costo * litros;
+
+      agregarAlCarrito(prod.nombre, subtotal, costoTotal, `${litros} L`, litros, prod.id);
+      document.getElementById('cant-litros').value = '';
+    }
+
+    function agregarAlCarrito(nombre, subtotal, costo, cantTxt, litrosNum, prodId) {
       const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: (subtotal - costo), prodId, esOtro, otroId });
+      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: (subtotal - costo), prodId });
       renderCarrito();
     }
 
@@ -391,7 +430,6 @@
     function cobrarVenta() {
       if (carrito.length === 0) return alert("La cuenta está vacía.");
 
-      // Descontar inventarios
       carrito.forEach(item => {
         if (item.prodId) {
           const p = productos.find(x => x.id === item.prodId);
@@ -400,19 +438,12 @@
             p.vendidos = (p.vendidos || 0) + item.litros;
           }
         }
-        if (item.esOtro && item.otroId) {
-          const o = otros.find(x => x.id === item.otroId);
-          if (o) {
-            o.stock = Math.max(0, o.stock - 1);
-          }
-        }
       });
 
       const fechaHoy = new Date().toISOString().split('T')[0];
       cuentas.push({ fecha: fechaHoy, items: [...carrito] });
 
       localStorage.setItem('pos_prods', JSON.stringify(productos));
-      localStorage.setItem('pos_otros', JSON.stringify(otros));
       localStorage.setItem('pos_cuentas', JSON.stringify(cuentas));
 
       carrito = [];
@@ -422,7 +453,7 @@
       alert("Venta registrada correctamente.");
     }
 
-    // AGREGAR / EDITAR PRODUCTOS LÍQUIDOS
+    // INVENTARIO DE TAMBOS
     function guardarProducto(e) {
       e.preventDefault();
       const id = document.getElementById('prod-id').value;
@@ -433,13 +464,11 @@
       const stock = parseFloat(document.getElementById('prod-stock').value);
 
       if (id) {
-        // Editar existente
         const index = productos.findIndex(p => p.id == id);
         if (index !== -1) {
           productos[index] = { ...productos[index], nombre, precio, costo, capacidad, stock };
         }
       } else {
-        // Nuevo producto
         productos.push({
           id: Date.now(),
           nombre,
@@ -480,7 +509,7 @@
       document.getElementById('prod-capacidad').value = '';
       document.getElementById('prod-stock').value = '';
 
-      document.getElementById('inv-form-title').innerText = "Agregar Producto Líquido";
+      document.getElementById('inv-form-title').innerText = "Agregar / Editar Producto Líquido";
       document.getElementById('btn-save-prod').innerText = "Guardar Producto";
       document.getElementById('btn-cancel-prod').classList.add('hidden');
     }
@@ -514,11 +543,13 @@
       }
     }
 
+    // COMBOS Y PROMOCIONES
     function guardarPromo(e) {
       e.preventDefault();
       promos.push({
         id: Date.now(),
         nombre: document.getElementById('promo-nombre').value,
+        desc: document.getElementById('promo-desc').value,
         precio: parseFloat(document.getElementById('promo-precio').value),
         costo: parseFloat(document.getElementById('promo-costo').value)
       });
@@ -531,7 +562,16 @@
       const c = document.getElementById('lista-promos-mng');
       c.innerHTML = '';
       promos.forEach(p => {
-        c.innerHTML += `<div class="p-2 border rounded flex justify-between"><span>${p.nombre} - $${p.precio}</span><button onclick="eliminarPromo(${p.id})" class="text-red-600 font-bold">✕</button></div>`;
+        c.innerHTML += `
+          <div class="p-2 border rounded flex justify-between items-center bg-amber-50">
+            <div>
+              <p class="font-bold text-amber-900">${p.nombre}</p>
+              <p class="text-gray-600 text-[11px]">${p.desc}</p>
+              <p class="text-xs text-amber-700 font-semibold">$${p.precio} (Costo real: $${p.costo})</p>
+            </div>
+            <button onclick="eliminarPromo(${p.id})" class="text-red-600 font-bold bg-red-100 px-2 py-1 rounded">✕</button>
+          </div>
+        `;
       });
     }
 
@@ -541,19 +581,48 @@
       renderPromos();
     }
 
-    // OTROS PRODUCTOS (Sin costo)
+    // OTROS PRODUCTOS (SIN CONTROL DE PIEZAS / STOCK)
     function guardarOtro(e) {
       e.preventDefault();
-      otros.push({
-        id: Date.now(),
-        nombre: document.getElementById('otro-nombre').value,
-        precio: parseFloat(document.getElementById('otro-precio').value),
-        stock: parseInt(document.getElementById('otro-stock').value)
-      });
+      const id = document.getElementById('otro-id').value;
+      const nombre = document.getElementById('otro-nombre').value;
+      const precio = parseFloat(document.getElementById('otro-precio').value);
+
+      if (id) {
+        const idx = otros.findIndex(o => o.id == id);
+        if (idx !== -1) {
+          otros[idx] = { ...otros[idx], nombre, precio };
+        }
+      } else {
+        otros.push({ id: Date.now(), nombre, precio });
+      }
+
       localStorage.setItem('pos_otros', JSON.stringify(otros));
-      e.target.reset();
+      cancelarEdicionOtro();
       renderOtros();
-      alert("Producto guardado correctamente.");
+    }
+
+    function editarOtro(id) {
+      const o = otros.find(x => x.id === id);
+      if (!o) return;
+
+      document.getElementById('otro-id').value = o.id;
+      document.getElementById('otro-nombre').value = o.nombre;
+      document.getElementById('otro-precio').value = o.precio;
+
+      document.getElementById('otro-form-title').innerText = "Editar Otro Producto";
+      document.getElementById('btn-save-otro').innerText = "Actualizar Producto";
+      document.getElementById('btn-cancel-otro').classList.remove('hidden');
+    }
+
+    function cancelarEdicionOtro() {
+      document.getElementById('otro-id').value = '';
+      document.getElementById('otro-nombre').value = '';
+      document.getElementById('otro-precio').value = '';
+
+      document.getElementById('otro-form-title').innerText = "Agregar Otro Producto";
+      document.getElementById('btn-save-otro').innerText = "Guardar Producto";
+      document.getElementById('btn-cancel-otro').classList.add('hidden');
     }
 
     function renderOtros() {
@@ -565,8 +634,8 @@
           <tr class="border-b">
             <td class="p-2 font-bold">${o.nombre}</td>
             <td class="p-2">$${o.precio}</td>
-            <td class="p-2 font-bold ${o.stock < 5 ? 'text-red-600' : 'text-emerald-700'}">${o.stock} pzas</td>
-            <td class="p-2">
+            <td class="p-2 space-x-1">
+              <button onclick="editarOtro(${o.id})" class="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">✏️️ Editar</button>
               <button onclick="eliminarOtro(${o.id})" class="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">✕ Eliminar</button>
             </td>
           </tr>
@@ -575,9 +644,11 @@
     }
 
     function eliminarOtro(id) {
-      otros = otros.filter(o => o.id !== id);
-      localStorage.setItem('pos_otros', JSON.stringify(otros));
-      renderOtros();
+      if (confirm("¿Deseas eliminar este producto de la lista?")) {
+        otros = otros.filter(o => o.id !== id);
+        localStorage.setItem('pos_otros', JSON.stringify(otros));
+        renderOtros();
+      }
     }
 
     // REPORTES Y PDF
@@ -652,7 +723,7 @@
       html2pdf().set({ margin: 0.5, filename: 'Surtido_Semanal_Tambos.pdf' }).from(htmlSemanal).save();
     }
 
-    // Inicializar
+    // Cargar interfaz al inicio
     renderVentas();
   </script>
 </body>
