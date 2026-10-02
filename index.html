@@ -11,14 +11,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    /* Estilos responsivos y de impresión */
     body { touch-action: manipulation; }
     .pdf-table th, .pdf-table td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
   </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 antialiased">
 
-  <!-- Navegación Principal adaptable a móviles -->
+  <!-- Navegación Principal -->
   <nav class="bg-blue-800 text-white p-2 shadow-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto flex flex-wrap justify-center gap-1 sm:gap-2 text-xs sm:text-sm">
       <button onclick="switchTab('ventas')" class="px-3 py-2 bg-blue-700 hover:bg-blue-900 rounded font-semibold flex-1 sm:flex-initial text-center">🛒 Caja / Ventas</button>
@@ -37,17 +36,25 @@
       <!-- Panel de Selección de Productos -->
       <div class="lg:col-span-2 bg-white p-4 sm:p-5 rounded-lg shadow space-y-4">
         
-        <!-- Calculadora por Dinero -->
-        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <span class="text-xs font-bold text-amber-900">💡 Calculadora ($ a Litros):</span>
-          <input type="number" id="calc-monto" placeholder="Monto $" class="border p-1.5 rounded text-sm w-full sm:w-28">
-          <select id="calc-producto" class="border p-1.5 rounded text-sm flex-1"></select>
-          <button onclick="calcularLitrosPorMonto()" class="bg-amber-600 text-white px-3 py-1.5 rounded text-sm font-semibold hover:bg-amber-700">Agregar</button>
+        <!-- Calculadora Manual ($ a Litros O Litros Directos) -->
+        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg space-y-2">
+          <span class="text-xs font-bold text-amber-900 block">💡 Calculadora de Ventas (Pesos o Litros):</span>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+            <select id="calc-modo" class="border p-2 rounded text-xs sm:text-sm font-semibold bg-white">
+              <option value="pesos">Por Dinero ($)</option>
+              <option value="litros">Por Litros (L)</option>
+            </select>
+            <input type="number" step="0.01" id="calc-monto" placeholder="Cantidad ($ o Litros)" class="border p-2 rounded text-sm w-full">
+            <select id="calc-producto" class="border p-2 rounded text-sm w-full bg-white"></select>
+            <button onclick="calcularYAgregarLíquido()" class="bg-amber-600 text-white p-2 rounded text-sm font-semibold hover:bg-amber-700 w-full">
+              ➕ Agregar a Caja
+            </button>
+          </div>
         </div>
 
-        <!-- Botones de Productos Líquidos (Quick Tap) -->
+        <!-- Botones de Productos Líquidos (Toque Rápido para 1L) -->
         <div>
-          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Líquidos (Toque rápido para 1L)</h3>
+          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Líquidos (Toque rápido para 1 Litro)</h3>
           <div id="grid-productos" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
         </div>
 
@@ -59,7 +66,7 @@
 
         <!-- Otros Productos (Piezas/Abarrotes) -->
         <div>
-          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Otros Productos</h3>
+          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Otros Productos (Piezas)</h3>
           <div id="grid-otros" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
         </div>
       </div>
@@ -99,14 +106,34 @@
     <!-- SECCIÓN 2: INVENTARIO DE TAMBOS -->
     <section id="tab-inventario" class="hidden space-y-4 sm:space-y-6">
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
-        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar / Configurar Producto Líquido</h2>
+        <h2 id="inv-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar Producto Líquido</h2>
         <form onsubmit="guardarProducto(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
-          <input type="text" id="prod-nombre" placeholder="Nombre (ej. Fabuloso)" required class="border p-2 rounded">
-          <input type="number" step="0.01" id="prod-precio" placeholder="Precio Venta/L ($)" required class="border p-2 rounded">
-          <input type="number" step="0.01" id="prod-costo" placeholder="Costo/L ($)" required class="border p-2 rounded">
-          <input type="number" id="prod-capacidad" placeholder="Capacidad Tambo (L) ej: 200" required class="border p-2 rounded">
-          <input type="number" step="0.1" id="prod-stock" placeholder="Litros Actuales" required class="border p-2 rounded">
-          <button type="submit" class="bg-blue-700 text-white font-bold py-2 rounded sm:col-span-2 lg:col-span-5">Guardar Producto</button>
+          <input type="hidden" id="prod-id">
+          <div>
+            <label class="text-xs font-bold text-gray-600">Nombre:</label>
+            <input type="text" id="prod-nombre" placeholder="ej. Fabuloso" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Precio Venta/L ($):</label>
+            <input type="number" step="0.01" id="prod-precio" placeholder="Precio a la gente" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Costo de compra ($):</label>
+            <input type="number" step="0.01" id="prod-costo" placeholder="A cómo te lo dan a ti" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Capacidad Tambo (L):</label>
+            <input type="number" id="prod-capacidad" placeholder="ej: 200" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Litros Actuales:</label>
+            <input type="number" step="0.1" id="prod-stock" placeholder="Stock actual" required class="border p-2 rounded w-full">
+          </div>
+          
+          <div class="sm:col-span-2 lg:col-span-5 flex gap-2">
+            <button type="submit" id="btn-save-prod" class="bg-blue-700 text-white font-bold py-2 px-4 rounded flex-1">Guardar Producto</button>
+            <button type="button" id="btn-cancel-prod" onclick="cancelarEdicionProd()" class="bg-gray-400 text-white font-bold py-2 px-4 rounded hidden">Cancelar</button>
+          </div>
         </form>
       </div>
 
@@ -116,11 +143,12 @@
           <thead>
             <tr class="bg-gray-100 border-b">
               <th class="p-2">Producto</th>
-              <th class="p-2">Capacidad Tambo</th>
+              <th class="p-2">Capacidad</th>
               <th class="p-2">Litros Actuales</th>
-              <th class="p-2">Litros Vendidos</th>
+              <th class="p-2">Vendidos</th>
               <th class="p-2">Precio/L</th>
-              <th class="p-2">Acción</th>
+              <th class="p-2">Costo/L</th>
+              <th class="p-2">Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-productos"></tbody>
@@ -145,30 +173,50 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 4: OTROS PRODUCTOS -->
+    <!-- SECCIÓN 4: OTROS PRODUCTOS (Piezas sin costo) -->
     <section id="tab-otros" class="hidden space-y-4">
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
-        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar Otro Producto (Piezas/Abarrotes)</h2>
-        <form onsubmit="guardarOtro(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
-          <input type="text" id="otro-nombre" placeholder="Nombre (ej. Fibra verde)" required class="border p-2 rounded">
-          <input type="number" step="0.01" id="otro-precio" placeholder="Precio ($)" required class="border p-2 rounded">
-          <input type="number" step="0.01" id="otro-costo" placeholder="Costo ($)" required class="border p-2 rounded">
-          <input type="number" id="otro-stock" placeholder="Piezas Disponibles" required class="border p-2 rounded">
-          <button type="submit" class="bg-blue-700 text-white font-bold py-2 rounded sm:col-span-4">Guardar Producto</button>
+        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar Otro Producto (Piezas / Abarrotes)</h2>
+        <form onsubmit="guardarOtro(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div>
+            <label class="text-xs font-bold text-gray-600">Nombre:</label>
+            <input type="text" id="otro-nombre" placeholder="ej. Fibra verde, Jalador" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Precio de Venta ($):</label>
+            <input type="number" step="0.01" id="otro-precio" placeholder="Precio al cliente" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Piezas Disponibles:</label>
+            <input type="number" id="otro-stock" placeholder="Cantidad actual" required class="border p-2 rounded w-full">
+          </div>
+          <button type="submit" class="bg-blue-700 text-white font-bold py-2 rounded sm:col-span-3">Guardar Producto</button>
         </form>
+      </div>
+
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow overflow-x-auto">
+        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Lista de Otros Productos</h2>
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-gray-100 border-b">
+              <th class="p-2">Producto</th>
+              <th class="p-2">Precio de Venta</th>
+              <th class="p-2">Piezas Disponibles</th>
+              <th class="p-2">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-otros"></tbody>
+        </table>
       </div>
     </section>
 
     <!-- SECCIÓN 5: REPORTES Y PDF -->
     <section id="tab-reportes" class="hidden space-y-6">
-      
-      <!-- Botones de Descarga -->
       <div class="flex flex-wrap gap-2">
         <button onclick="generarPDFDiario()" class="bg-blue-800 text-white px-4 py-2 rounded shadow text-xs sm:text-sm font-bold">📄 PDF Cierre Diario</button>
         <button onclick="generarPDFSemanal()" class="bg-indigo-800 text-white px-4 py-2 rounded shadow text-xs sm:text-sm font-bold">📊 PDF Surtido Semanal</button>
       </div>
 
-      <!-- Vista previa del PDF Diario -->
       <div id="pdf-container" class="bg-white p-4 sm:p-8 rounded shadow max-w-2xl mx-auto border text-xs">
         <div class="mb-4 border-b pb-2">
           <h1 class="text-xl font-bold text-gray-900">Reporte de Ventas</h1>
@@ -200,11 +248,11 @@
   </main>
 
   <script>
-    // REGISTRO DE SERVICE WORKER PARA FUNCIONAMIENTO OFFLINE
+    // Offline ServiceWorker
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', e => {
-          e.waitUntil(caches.open('app-v1').then(cache => cache.addAll(['./'])));
+          e.waitUntil(caches.open('app-v2').then(cache => cache.addAll(['./'])));
         });
         self.addEventListener('fetch', e => {
           e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
@@ -214,11 +262,11 @@
       navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
     }
 
-    // ESTADO GENERAL DE LA APLICACIÓN
+    // ESTADO GENERAL
     let productos = JSON.parse(localStorage.getItem('pos_prods')) || [
       { id: 1, nombre: 'Roma', precio: 17, costo: 9, capacidad: 200, stock: 200, vendidos: 0 },
-      { id: 2, nombre: 'Cloro', precio: 6, costo: 6, capacidad: 200, stock: 200, vendidos: 0 },
-      { id: 3, nombre: 'Fabuloso', precio: 15, costo: 10, capacidad: 200, stock: 200, vendidos: 0 }
+      { id: 2, nombre: 'Cloro', precio: 6, costo: 3.5, capacidad: 200, stock: 200, vendidos: 0 },
+      { id: 3, nombre: 'Fabuloso', precio: 15, costo: 8, capacidad: 200, stock: 200, vendidos: 0 }
     ];
 
     let promos = JSON.parse(localStorage.getItem('pos_promos')) || [];
@@ -235,6 +283,7 @@
       if (tab === 'ventas') renderVentas();
       if (tab === 'inventario') renderInventario();
       if (tab === 'promos') renderPromos();
+      if (tab === 'otros') renderOtros();
       if (tab === 'reportes') renderReportePDF();
     }
 
@@ -268,28 +317,48 @@
       gOt.innerHTML = '';
       otros.forEach(o => {
         gOt.innerHTML += `
-          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio}, ${o.costo}, '1 Pza', 0, null)" class="p-2 border rounded bg-gray-50 hover:bg-gray-100 text-left">
+          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio}, 0, '1 Pza', 0, null, true, ${o.id})" class="p-2 border rounded bg-gray-50 hover:bg-gray-100 text-left">
             <p class="font-bold text-xs">${o.nombre}</p>
-            <p class="text-xs text-gray-600">$${o.precio}</p>
+            <p class="text-xs text-gray-600">$${o.precio} (${o.stock} pzas)</p>
           </button>
         `;
       });
     }
 
-    function calcularLitrosPorMonto() {
-      const monto = parseFloat(document.getElementById('calc-monto').value);
+    // CALCULADORA MANUAL (Dinero o Litros directos)
+    function calcularYAgregarLíquido() {
+      const modo = document.getElementById('calc-modo').value;
+      const valor = parseFloat(document.getElementById('calc-monto').value);
       const idP = parseInt(document.getElementById('calc-producto').value);
       const prod = productos.find(p => p.id === idP);
-      if (!monto || !prod) return;
 
-      const litros = (monto / prod.precio).toFixed(2);
-      agregarAlCarrito(prod.nombre, monto, (prod.costo * litros), `${litros} L`, parseFloat(litros), prod.id);
+      if (!valor || valor <= 0 || !prod) {
+        alert("Por favor ingresa una cantidad válida.");
+        return;
+      }
+
+      let subtotal = 0;
+      let litros = 0;
+
+      if (modo === 'pesos') {
+        subtotal = valor;
+        litros = valor / prod.precio;
+      } else {
+        litros = valor;
+        subtotal = valor * prod.precio;
+      }
+
+      const costoTotal = prod.costo * litros;
+      const cantTexto = `${parseFloat(litros.toFixed(2))} L`;
+
+      agregarAlCarrito(prod.nombre, subtotal, costoTotal, cantTexto, litros, prod.id);
       document.getElementById('calc-monto').value = '';
     }
 
-    function agregarAlCarrito(nombre, subtotal, costo, cantTxt, litrosNum, prodId) {
-      const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
-      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: (subtotal - costo), prodId });
+    function agregarAlCarrito(nombre, subtotal, costo, cantTxt, litrosNum, prodId, esOtro = false, otroId = null) {
+      // Registrar HORA EXACTA del momento en que entra al carrito
+      const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: (subtotal - costo), prodId, esOtro, otroId });
       renderCarrito();
     }
 
@@ -302,7 +371,7 @@
         cont.innerHTML += `
           <div class="flex justify-between items-center text-xs border-b pb-1">
             <div>
-              <p class="font-bold">${item.producto}</p>
+              <p class="font-bold">${item.producto} <span class="text-[10px] text-gray-400">(${item.hora})</span></p>
               <p class="text-gray-500">${item.cantidad} - $${item.subtotal.toFixed(2)}</p>
             </div>
             <button onclick="carrito.splice(${idx},1); renderCarrito();" class="text-red-600 font-bold">✕</button>
@@ -322,7 +391,7 @@
     function cobrarVenta() {
       if (carrito.length === 0) return alert("La cuenta está vacía.");
 
-      // Restar litros del inventario de tambos
+      // Descontar inventarios
       carrito.forEach(item => {
         if (item.prodId) {
           const p = productos.find(x => x.id === item.prodId);
@@ -331,13 +400,19 @@
             p.vendidos = (p.vendidos || 0) + item.litros;
           }
         }
+        if (item.esOtro && item.otroId) {
+          const o = otros.find(x => x.id === item.otroId);
+          if (o) {
+            o.stock = Math.max(0, o.stock - 1);
+          }
+        }
       });
 
-      // Guardar cuenta como 1 sola transacción
       const fechaHoy = new Date().toISOString().split('T')[0];
       cuentas.push({ fecha: fechaHoy, items: [...carrito] });
 
       localStorage.setItem('pos_prods', JSON.stringify(productos));
+      localStorage.setItem('pos_otros', JSON.stringify(otros));
       localStorage.setItem('pos_cuentas', JSON.stringify(cuentas));
 
       carrito = [];
@@ -347,20 +422,67 @@
       alert("Venta registrada correctamente.");
     }
 
+    // AGREGAR / EDITAR PRODUCTOS LÍQUIDOS
     function guardarProducto(e) {
       e.preventDefault();
-      productos.push({
-        id: Date.now(),
-        nombre: document.getElementById('prod-nombre').value,
-        precio: parseFloat(document.getElementById('prod-precio').value),
-        costo: parseFloat(document.getElementById('prod-costo').value),
-        capacidad: parseFloat(document.getElementById('prod-capacidad').value),
-        stock: parseFloat(document.getElementById('prod-stock').value),
-        vendidos: 0
-      });
+      const id = document.getElementById('prod-id').value;
+      const nombre = document.getElementById('prod-nombre').value;
+      const precio = parseFloat(document.getElementById('prod-precio').value);
+      const costo = parseFloat(document.getElementById('prod-costo').value);
+      const capacidad = parseFloat(document.getElementById('prod-capacidad').value);
+      const stock = parseFloat(document.getElementById('prod-stock').value);
+
+      if (id) {
+        // Editar existente
+        const index = productos.findIndex(p => p.id == id);
+        if (index !== -1) {
+          productos[index] = { ...productos[index], nombre, precio, costo, capacidad, stock };
+        }
+      } else {
+        // Nuevo producto
+        productos.push({
+          id: Date.now(),
+          nombre,
+          precio,
+          costo,
+          capacidad,
+          stock,
+          vendidos: 0
+        });
+      }
+
       localStorage.setItem('pos_prods', JSON.stringify(productos));
-      e.target.reset();
+      cancelarEdicionProd();
       renderInventario();
+    }
+
+    function editarProducto(id) {
+      const p = productos.find(x => x.id === id);
+      if (!p) return;
+
+      document.getElementById('prod-id').value = p.id;
+      document.getElementById('prod-nombre').value = p.nombre;
+      document.getElementById('prod-precio').value = p.precio;
+      document.getElementById('prod-costo').value = p.costo;
+      document.getElementById('prod-capacidad').value = p.capacidad;
+      document.getElementById('prod-stock').value = p.stock;
+
+      document.getElementById('inv-form-title').innerText = "Editar Producto Líquido";
+      document.getElementById('btn-save-prod').innerText = "Actualizar Producto";
+      document.getElementById('btn-cancel-prod').classList.remove('hidden');
+    }
+
+    function cancelarEdicionProd() {
+      document.getElementById('prod-id').value = '';
+      document.getElementById('prod-nombre').value = '';
+      document.getElementById('prod-precio').value = '';
+      document.getElementById('prod-costo').value = '';
+      document.getElementById('prod-capacidad').value = '';
+      document.getElementById('prod-stock').value = '';
+
+      document.getElementById('inv-form-title').innerText = "Agregar Producto Líquido";
+      document.getElementById('btn-save-prod').innerText = "Guardar Producto";
+      document.getElementById('btn-cancel-prod').classList.add('hidden');
     }
 
     function renderInventario() {
@@ -374,16 +496,22 @@
             <td class="p-2 font-bold ${p.stock < 20 ? 'text-red-600' : 'text-emerald-700'}">${p.stock.toFixed(1)} L</td>
             <td class="p-2">${(p.vendidos || 0).toFixed(1)} L</td>
             <td class="p-2">$${p.precio}/L</td>
-            <td class="p-2"><button onclick="eliminarProd(${p.id})" class="text-red-600">Eliminar</button></td>
+            <td class="p-2">$${p.costo}/L</td>
+            <td class="p-2 space-x-1">
+              <button onclick="editarProducto(${p.id})" class="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">✏️ Editar</button>
+              <button onclick="eliminarProd(${p.id})" class="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">✕</button>
+            </td>
           </tr>
         `;
       });
     }
 
     function eliminarProd(id) {
-      productos = productos.filter(p => p.id !== id);
-      localStorage.setItem('pos_prods', JSON.stringify(productos));
-      renderInventario();
+      if (confirm("¿Estás seguro de eliminar este producto?")) {
+        productos = productos.filter(p => p.id !== id);
+        localStorage.setItem('pos_prods', JSON.stringify(productos));
+        renderInventario();
+      }
     }
 
     function guardarPromo(e) {
@@ -403,7 +531,7 @@
       const c = document.getElementById('lista-promos-mng');
       c.innerHTML = '';
       promos.forEach(p => {
-        c.innerHTML += `<div class="p-2 border rounded flex justify-between"><span>${p.nombre} - $${p.precio}</span><button onclick="eliminarPromo(${p.id})" class="text-red-600">✕</button></div>`;
+        c.innerHTML += `<div class="p-2 border rounded flex justify-between"><span>${p.nombre} - $${p.precio}</span><button onclick="eliminarPromo(${p.id})" class="text-red-600 font-bold">✕</button></div>`;
       });
     }
 
@@ -413,20 +541,46 @@
       renderPromos();
     }
 
+    // OTROS PRODUCTOS (Sin costo)
     function guardarOtro(e) {
       e.preventDefault();
       otros.push({
         id: Date.now(),
         nombre: document.getElementById('otro-nombre').value,
         precio: parseFloat(document.getElementById('otro-precio').value),
-        costo: parseFloat(document.getElementById('otro-costo').value),
         stock: parseInt(document.getElementById('otro-stock').value)
       });
       localStorage.setItem('pos_otros', JSON.stringify(otros));
       e.target.reset();
-      alert("Producto guardado.");
+      renderOtros();
+      alert("Producto guardado correctamente.");
     }
 
+    function renderOtros() {
+      const tb = document.getElementById('tabla-otros');
+      if (!tb) return;
+      tb.innerHTML = '';
+      otros.forEach(o => {
+        tb.innerHTML += `
+          <tr class="border-b">
+            <td class="p-2 font-bold">${o.nombre}</td>
+            <td class="p-2">$${o.precio}</td>
+            <td class="p-2 font-bold ${o.stock < 5 ? 'text-red-600' : 'text-emerald-700'}">${o.stock} pzas</td>
+            <td class="p-2">
+              <button onclick="eliminarOtro(${o.id})" class="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">✕ Eliminar</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function eliminarOtro(id) {
+      otros = otros.filter(o => o.id !== id);
+      localStorage.setItem('pos_otros', JSON.stringify(otros));
+      renderOtros();
+    }
+
+    // REPORTES Y PDF
     function renderReportePDF() {
       const hoy = new Date();
       document.getElementById('pdf-fecha').innerText = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -447,7 +601,7 @@
 
           tbody.innerHTML += `
             <tr>
-              <td>${i.hora}</td>
+              <td>${i.hora || '--:--'}</td>
               <td class="font-bold">${i.producto}</td>
               <td>${i.cantidad}</td>
               <td>$${i.subtotal.toFixed(2)}</td>
@@ -498,7 +652,7 @@
       html2pdf().set({ margin: 0.5, filename: 'Surtido_Semanal_Tambos.pdf' }).from(htmlSemanal).save();
     }
 
-    // Inicialización
+    // Inicializar
     renderVentas();
   </script>
 </body>
