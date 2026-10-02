@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casa de Letty Paz - Punto de Venta y Control</title>
+  <!-- TailWind CSS para diseño limpio y moderno -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- html2pdf.js para generar PDFs idénticos al formato exacto -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* Estilos específicos para impresión/PDF idéntico al reporte */
+    .pdf-table th, .pdf-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+  <!-- Encabezado de la App -->
+  <header class="bg-blue-700 text-white p-4 shadow-md flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold">🧴 Casa de Letty Paz</h1>
+      <p class="text-xs text-blue-200">Sistema POS, Inventario y Surtido Semanal</p>
+    </div>
+    <div class="space-x-2">
+      <button onclick="switchTab('ventas')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-800 rounded font-semibold text-sm">🛒 Caja / Ventas</button>
+      <button onclick="switchTab('inventario')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-800 rounded font-semibold text-sm">📦 Inventario / Promos</button>
+      <button onclick="switchTab('reportes')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-800 rounded font-semibold text-sm">📊 Reportes y PDF</button>
+    </div>
+  </header>
+
+  <main class="p-6 max-w-7xl mx-auto">
+
+    <!-- SECCIÓN 1: TERMINAL DE VENTAS / CAJA -->
+    <section id="tab-ventas" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Panel de Selección de Productos y Promos -->
+      <div class="lg:col-span-2 bg-white p-5 rounded-lg shadow space-y-4">
+        <h2 class="text-xl font-bold border-b pb-2 text-gray-700">Seleccionar Producto o Combo</h2>
+        
+        <!-- Calculadora por Monto en Dinero ($) -->
+        <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg flex items-center gap-3">
+          <span class="text-sm font-semibold text-yellow-800">💡 Calculadora de Litros por Dinero ($):</span>
+          <input type="number" id="calc-monto" placeholder="Ej: $50" class="border p-1.5 rounded w-28 text-sm">
+          <select id="calc-producto" class="border p-1.5 rounded text-sm flex-1"></select>
+          <button onclick="calcularLitrosPorMonto()" class="bg-yellow-600 text-white px-3 py-1.5 rounded text-sm font-semibold hover:bg-yellow-700">Calcular</button>
+        </div>
+
+        <!-- Grid de Productos -->
+        <div>
+          <h3 class="font-semibold text-sm text-gray-600 mb-2">LÍQUIDOS / PRODUCTOS</h3>
+          <div id="grid-productos" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+        </div>
+
+        <!-- Grid de Promos / Combos -->
+        <div class="pt-3 border-t">
+          <h3 class="font-semibold text-sm text-gray-600 mb-2">🎁 COMBOS Y PROMOCIONES</h3>
+          <div id="grid-promos" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+        </div>
+      </div>
+
+      <!-- Cuenta Actual (Carrito) -->
+      <div class="bg-white p-5 rounded-lg shadow flex flex-col justify-between">
+        <div>
+          <h2 class="text-xl font-bold border-b pb-2 text-gray-700 mb-4">Cuenta Actual</h2>
+          
+          <div id="carrito-items" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+            <p class="text-sm text-gray-400 italic">No hay productos agregados a la cuenta.</p>
+          </div>
+        </div>
+
+        <div class="border-t pt-4 mt-4 space-y-3">
+          <div class="flex justify-between text-lg font-bold">
+            <span>Total:</span>
+            <span id="cart-total" class="text-blue-700">$0.00</span>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold text-gray-600">Paga con ($):</label>
+            <input type="number" id="pago-cliente" oninput="calcularCambio()" placeholder="Monto entregado" class="w-full border p-2 rounded text-lg font-bold">
+          </div>
+
+          <div class="flex justify-between text-md font-semibold text-emerald-700 bg-emerald-50 p-2 rounded">
+            <span>Cambio:</span>
+            <span id="cart-cambio">$0.00</span>
+          </div>
+
+          <button onclick="cobrarVenta()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow transition">
+            💳 REGISTRAR Y COBRAR
+          </button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SECCIÓN 2: INVENTARIO Y COMBOS -->
+    <section id="tab-inventario" class="hidden space-y-6">
+      <div class="bg-white p-5 rounded-lg shadow">
+        <h2 class="text-xl font-bold border-b pb-2 text-gray-700 mb-4">Agregar Nuevo Producto</h2>
+        <form id="form-producto" onsubmit="guardarProducto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input type="text" id="prod-nombre" placeholder="Nombre (ej. Roma, Cloro)" required class="border p-2 rounded">
+          <input type="number" step="0.01" id="prod-precio" placeholder="Precio de Venta / Litro ($)" required class="border p-2 rounded">
+          <input type="number" step="0.01" id="prod-costo" placeholder="Costo / Litro ($)" required class="border p-2 rounded">
+          <input type="number" step="0.1" id="prod-stock" placeholder="Stock Inicial (Litros)" required class="border p-2 rounded">
+          <button type="submit" class="bg-blue-600 text-white font-semibold py-2 rounded md:col-span-4 hover:bg-blue-700">Guardar Producto</button>
+        </form>
+      </div>
+
+      <div class="bg-white p-5 rounded-lg shadow">
+        <h2 class="text-xl font-bold border-b pb-2 text-gray-700 mb-4">Lista de Productos</h2>
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="bg-gray-100 border-b">
+              <th class="p-2">Producto</th>
+              <th class="p-2">Precio/L</th>
+              <th class="p-2">Costo/L</th>
+              <th class="p-2">Ganancia/L</th>
+              <th class="p-2">Stock Actual</th>
+              <th class="p-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-productos"></tbody>
+        </table>
+      </div>
+    </section>
+
+
+    <!-- SECCIÓN 3: REPORTES Y GENERACIÓN DE PDF -->
+    <section id="tab-reportes" class="hidden space-y-6">
+      <div class="flex gap-4">
+        <button onclick="generarPDFDiario()" class="bg-blue-700 text-white px-5 py-2.5 rounded shadow font-bold hover:bg-blue-800">
+          📄 Descargar PDF Cierre Diario
+        </button>
+        <button onclick="generarPDFSemanal()" class="bg-indigo-700 text-white px-5 py-2.5 rounded shadow font-bold hover:bg-indigo-800">
+          📊 Descargar PDF Surtido Semanal
+        </button>
+      </div>
+
+      <!-- Vista previa que se convierte en PDF (Formato exacto de tu imagen) -->
+      <div id="pdf-container" class="bg-white p-8 rounded shadow max-w-2xl mx-auto border">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">📦 Reporte de Ventas</h1>
+            <p id="pdf-fecha" class="text-xs text-gray-500 italic mt-0.5"></p>
+          </div>
+        </div>
+
+        <table class="w-full text-xs text-left pdf-table border-collapse mb-6">
+          <thead>
+            <tr class="bg-gray-100 text-gray-700 font-bold border-b border-t">
+              <th>HORA</th>
+              <th>PRODUCTO / PROMO</th>
+              <th>CANTIDAD</th>
+              <th>SUBTOTAL</th>
+              <th>GANANCIA</th>
+            </tr>
+          </thead>
+          <tbody id="pdf-filas-ventas"></tbody>
+        </table>
+
+        <!-- Tarjeta de Resumen -->
+        <div class="bg-gray-50 p-4 rounded-lg border text-xs space-y-2 max-w-sm ml-auto">
+          <h3 class="font-bold text-gray-800 flex items-center gap-1 border-b pb-1">💰 Resumen</h3>
+          <div class="flex justify-between">
+            <span>Total de cuentas</span>
+            <span id="pdf-total-cuentas" class="font-bold">0</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Total de ventas</span>
+            <span id="pdf-total-ventas" class="font-bold">$0.00</span>
+          </div>
+          <div class="flex justify-between border-t pt-1 font-bold text-sm text-gray-900">
+            <span>Ganancias del día</span>
+            <span id="pdf-total-ganancias">$0.00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // ESTADO DE LA APLICACIÓN (Guardado en LocalStorage)
+    let productos = JSON.parse(localStorage.getItem('cldp_productos')) || [
+      { id: 1, nombre: 'Roma', precio: 17, costo: 9, stock: 100 },
+      { id: 2, nombre: 'Cloro', precio: 6, costo: 6, stock: 100 },
+      { id: 3, nombre: 'Fabuloso', precio: 15, costo: 10, stock: 100 },
+      { id: 4, nombre: 'Desengrasante', precio: 27, costo: 10, stock: 100 }
+    ];
+
+    let promos = JSON.parse(localStorage.getItem('cldp_promos')) || [
+      { id: 101, nombre: '🎁 1 ESCUDO', precio: 10, costo: 10, items: [] }
+    ];
+
+    let ventas = JSON.parse(localStorage.getItem('cldp_ventas')) || [];
+    let carrito = [];
+
+    // CAMBIO DE PESTAÑAS
+    function switchTab(tab) {
+      document.getElementById('tab-ventas').classList.add('hidden');
+      document.getElementById('tab-inventario').classList.add('hidden');
+      document.getElementById('tab-reportes').classList.add('hidden');
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+      if (tab === 'ventas') renderVentas();
+      if (tab === 'inventario') renderInventario();
+      if (tab === 'reportes') renderReportePDF();
+    }
+
+    // RENDERIZAR CAJA
+    function renderVentas() {
+      const gridP = document.getElementById('grid-productos');
+      const selectCalc = document.getElementById('calc-producto');
+      gridP.innerHTML = '';
+      selectCalc.innerHTML = '';
+
+      productos.forEach(p => {
+        gridP.innerHTML += `
+          <div class="border p-3 rounded-lg bg-gray-50 hover:bg-blue-50 cursor-pointer text-center" onclick="agregarAlCarrito('${p.nombre}', ${p.precio}, ${p.costo}, '1 L', 1)">
+            <p class="font-bold text-sm text-gray-800">${p.nombre}</p>
+            <p class="text-xs text-blue-600 font-bold">$${p.precio.toFixed(2)} / L</p>
+          </div>
+        `;
+        selectCalc.innerHTML += `<option value="${p.id}">${p.nombre} ($${p.precio}/L)</option>`;
+      });
+
+      const gridPr = document.getElementById('grid-promos');
+      gridPr.innerHTML = '';
+      promos.forEach(pr => {
+        gridPr.innerHTML += `
+          <div class="border p-3 rounded-lg bg-amber-50 hover:bg-amber-100 cursor-pointer text-center" onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio}, ${pr.costo}, '1 Combo', 1)">
+            <p class="font-bold text-sm text-amber-900">${pr.nombre}</p>
+            <p class="text-xs text-amber-700 font-bold">$${pr.precio.toFixed(2)}</p>
+          </div>
+        `;
+      });
+    }
+
+    // CALCULADORA DE LITROS POR DINERO
+    function calcularLitrosPorMonto() {
+      const monto = parseFloat(document.getElementById('calc-monto').value);
+      const idP = parseInt(document.getElementById('calc-producto').value);
+      const prod = productos.find(p => p.id === idP);
+
+      if (!monto || !prod) return;
+
+      const litrosCalculados = (monto / prod.precio).toFixed(2);
+      agregarAlCarrito(prod.nombre, monto, (prod.costo * litrosCalculados), `${litrosCalculados} L`, litrosCalculados);
+      document.getElementById('calc-monto').value = '';
+    }
+
+    // AGREGAR AL CARRITO
+    function agregarAlCarrito(nombre, subtotal, costoTotal, cantidadTxt, litrosNum) {
+      const horaExacta = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+      
+      carrito.push({
+        hora: horaExacta,
+        producto: nombre,
+        cantidad: cantidadTxt,
+        litros: litrosNum,
+        subtotal: subtotal,
+        ganancia: (subtotal - costoTotal)
+      });
+
+      renderCarrito();
+    }
+
+    function renderCarrito() {
+      const container = document.getElementById('carrito-items');
+      container.innerHTML = '';
+
+      let total = 0;
+      carrito.forEach((item, index) => {
+        total += item.subtotal;
+        container.innerHTML += `
+          <div class="flex justify-between items-center text-xs border-b pb-2">
+            <div>
+              <p class="font-bold text-gray-800">${item.producto}</p>
+              <p class="text-gray-500">${item.cantidad} - $${item.subtotal.toFixed(2)}</p>
+            </div>
+            <button onclick="eliminarDelCarrito(${index})" class="text-red-500 font-bold">✕</button>
+          </div>
+        `;
+      });
+
+      document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
+      calcularCambio();
+    }
+
+    function eliminarDelCarrito(index) {
+      carrito.splice(index, 1);
+      renderCarrito();
+    }
+
+    function calcularCambio() {
+      const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+      const pago = parseFloat(document.getElementById('pago-cliente').value) || 0;
+      const cambio = pago - total;
+      document.getElementById('cart-cambio').innerText = `$${(cambio > 0 ? cambio : 0).toFixed(2)}`;
+    }
+
+    // COBRAR VENTA
+    function cobrarVenta() {
+      if (carrito.length === 0) return alert("La cuenta está vacía.");
+
+      const fechaHoy = new Date().toISOString().split('T')[0];
+      
+      carrito.forEach(item => {
+        ventas.push({
+          ...item,
+          fecha: fechaHoy
+        });
+      });
+
+      localStorage.setItem('cldp_ventas', JSON.stringify(ventas));
+      carrito = [];
+      document.getElementById('pago-cliente').value = '';
+      renderCarrito();
+      alert("Venta registrada con éxito.");
+    }
+
+    // INVENTARIO
+    function guardarProducto(e) {
+      e.preventDefault();
+      const p = {
+        id: Date.now(),
+        nombre: document.getElementById('prod-nombre').value,
+        precio: parseFloat(document.getElementById('prod-precio').value),
+        costo: parseFloat(document.getElementById('prod-costo').value),
+        stock: parseFloat(document.getElementById('prod-stock').value)
+      };
+      productos.push(p);
+      localStorage.setItem('cldp_productos', JSON.stringify(productos));
+      document.getElementById('form-producto').reset();
+      renderInventario();
+    }
+
+    function renderInventario() {
+      const tbody = document.getElementById('tabla-productos');
+      tbody.innerHTML = '';
+      productos.forEach(p => {
+        tbody.innerHTML += `
+          <tr class="border-b">
+            <td class="p-2 font-bold">${p.nombre}</td>
+            <td class="p-2">$${p.precio.toFixed(2)}</td>
+            <td class="p-2">$${p.costo.toFixed(2)}</td>
+            <td class="p-2 text-emerald-600 font-bold">$${(p.precio - p.costo).toFixed(2)}</td>
+            <td class="p-2">${p.stock} L</td>
+            <td class="p-2"><button onclick="eliminarProducto(${p.id})" class="text-red-600">Eliminar</button></td>
+          </tr>
+        `;
+      });
+    }
+
+    function eliminarProducto(id) {
+      productos = productos.filter(p => p.id !== id);
+      localStorage.setItem('cldp_productos', JSON.stringify(productos));
+      renderInventario();
+    }
+
+    // RENDERIZAR REPORTE EN PANTALLA
+    function renderReportePDF() {
+      const hoy = new Date();
+      const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('pdf-fecha').innerText = hoy.toLocaleDateString('es-MX', opcionesFecha);
+
+      const fechaHoy = hoy.toISOString().split('T')[0];
+      const ventasHoy = ventas.filter(v => v.fecha === fechaHoy);
+
+      const tbody = document.getElementById('pdf-filas-ventas');
+      tbody.innerHTML = '';
+
+      let totalVentas = 0;
+      let totalGanancias = 0;
+
+      ventasHoy.forEach(v => {
+        totalVentas += v.subtotal;
+        totalGanancias += v.ganancia;
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${v.hora}</td>
+            <td class="font-bold">${v.producto}</td>
+            <td>${v.cantidad}</td>
+            <td>$${v.subtotal.toFixed(2)}</td>
+            <td>$${v.ganancia.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('pdf-total-cuentas').innerText = ventasHoy.length;
+      document.getElementById('pdf-total-ventas').innerText = `$${totalVentas.toFixed(2)}`;
+      document.getElementById('pdf-total-ganancias').innerText = `$${totalGanancias.toFixed(2)}`;
+    }
+
+    // GENERACIÓN DE PDF DIARIO
+    function generarPDFDiario() {
+      const element = document.getElementById('pdf-container');
+      const opt = {
+        margin:       0.5,
+        filename:     `Reporte_Ventas_${new Date().toISOString().split('T')[0]}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // GENERACIÓN DE PDF SEMANAL CON REDONDEO HACIA ARRIBA
+    function generarPDFSemanal() {
+      // Agrupar litros por producto
+      const resumenLitros = {};
+      ventas.forEach(v => {
+        if (!resumenLitros[v.producto]) resumenLitros[v.producto] = 0;
+        resumenLitros[v.producto] += (v.litros || 1);
+      });
+
+      let htmlSemanal = `
+        <div style="padding: 20px; font-family: sans-serif;">
+          <h2>📊 Resumen Semanal de Surtido</h2>
+          <p>Totales a pedir a proveedores (Litros redondeados hacia arriba):</p>
+          <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+              <tr style="background: #f3f4f6;">
+                <th style="padding: 8px;">PRODUCTO</th>
+                <th style="padding: 8px;">LITROS VENDIDOS</th>
+                <th style="padding: 8px;">A SURTIR (REDONDEADO)</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      for (const [prod, litros] of Object.entries(resumenLitros)) {
+        // REDONDEO HACIA ARRIBA (ej. 20.5 L -> 21 L)
+        const aSurtir = Math.ceil(litros);
+        htmlSemanal += `
+          <tr>
+            <td style="padding: 8px;"><b>${prod}</b></td>
+            <td style="padding: 8px;">${litros.toFixed(2)} L</td>
+            <td style="padding: 8px; color: green; font-weight: bold;">${aSurtir} L</td>
+          </tr>
+        `;
+      }
+
+      htmlSemanal += `</tbody></table></div>`;
+
+      const opt = {
+        margin: 0.5,
+        filename: `Surtido_Semanal.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter' }
+      };
+
+      html2pdf().set(opt).from(htmlSemanal).save();
+    }
+
+    // Inicializar
+    renderVentas();
+  </script>
+</body>
+</html>
