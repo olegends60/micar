@@ -153,11 +153,11 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 3: COMBOS Y PROMOCIONES -->
+    <!-- SECCIÓN 3: COMBOS Y PROMOCIONES (SIN COSTO REAL) -->
     <section id="tab-promos" class="hidden space-y-4">
       <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
         <h2 id="promo-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Crear / Editar Combo o Promoción</h2>
-        <form onsubmit="guardarPromo(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+        <form onsubmit="guardarPromo(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <input type="hidden" id="promo-id">
           <div>
             <label class="text-xs font-bold text-gray-600">Nombre del Combo:</label>
@@ -165,17 +165,13 @@
           </div>
           <div>
             <label class="text-xs font-bold text-gray-600">Productos que incluye:</label>
-            <input type="text" id="promo-desc" oninput="sugerirCostoReal()" placeholder="ej. 1L Cloro + 1L Fabuloso" required class="border p-2 rounded w-full">
+            <input type="text" id="promo-desc" placeholder="ej. 1L Cloro + 1L Fabuloso" required class="border p-2 rounded w-full">
           </div>
           <div>
             <label class="text-xs font-bold text-gray-600">Precio de Venta Combo ($):</label>
             <input type="number" step="0.01" id="promo-precio" placeholder="Precio promocional" required class="border p-2 rounded w-full">
           </div>
-          <div>
-            <label class="text-xs font-bold text-gray-600">Costo Total Real ($):</label>
-            <input type="number" step="0.01" id="promo-costo" placeholder="Calculado automáticamente o manual" required class="border p-2 rounded w-full">
-          </div>
-          <div class="sm:col-span-2 flex gap-2">
+          <div class="sm:col-span-3 flex gap-2">
             <button type="submit" id="btn-save-promo" class="bg-blue-700 text-white font-bold py-2 rounded flex-1">Guardar Combo / Promoción</button>
             <button type="button" id="btn-cancel-promo" onclick="cancelarEdicionPromo()" class="bg-gray-400 text-white font-bold py-2 rounded px-4 hidden">Cancelar</button>
           </div>
@@ -224,16 +220,34 @@
       </div>
     </section>
 
-    <!-- SECCIÓN 5: REPORTES Y PDF -->
+    <!-- SECCIÓN 5: REPORTES DIARIOS Y SEMANALES EN PDF -->
     <section id="tab-reportes" class="hidden space-y-6">
-      <div class="flex flex-wrap gap-2">
-        <button onclick="generarPDFDiario()" class="bg-blue-800 text-white px-4 py-2 rounded shadow text-xs sm:text-sm font-bold">📄 Descargar PDF Cierre Diario</button>
+      
+      <!-- Selector de Modo de Reporte -->
+      <div class="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex gap-2 items-center">
+          <label class="text-xs font-bold text-gray-700">Modo de Reporte:</label>
+          <select id="tipo-reporte" onchange="actualizarVistaReporte()" class="border p-2 rounded text-xs font-bold bg-gray-50">
+            <option value="diario">📅 Reporte Diario (Seleccionar día)</option>
+            <option value="semanal">📆 Reporte Cierre Semanal</option>
+          </select>
+        </div>
+
+        <div id="wrapper-fecha-diario" class="flex gap-2 items-center">
+          <label class="text-xs font-bold text-gray-700">Ver día guardado:</label>
+          <input type="date" id="fecha-reporte-diario" onchange="renderReportePDF()" class="border p-1.5 rounded text-xs bg-gray-50">
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="descargarPDFActual()" class="bg-blue-800 text-white px-4 py-2 rounded shadow text-xs font-bold">📄 Descargar PDF</button>
+        </div>
       </div>
 
+      <!-- PLANTILLA DE REPORTES EN PDF -->
       <div id="pdf-container" class="bg-white p-4 sm:p-8 rounded shadow max-w-2xl mx-auto border text-xs space-y-6">
         <div class="border-b pb-2">
-          <h1 class="text-xl font-bold text-gray-900">Reporte de Ventas Diario</h1>
-          <p id="pdf-fecha" class="text-xs text-gray-500 italic"></p>
+          <h1 id="pdf-titulo-principal" class="text-xl font-bold text-gray-900">Reporte de Ventas Diario</h1>
+          <p id="pdf-subtitulo-fecha" class="text-xs text-gray-500 italic"></p>
         </div>
 
         <div>
@@ -241,48 +255,56 @@
           <table class="w-full text-left pdf-table border-collapse mb-4">
             <thead>
               <tr class="bg-gray-100 font-bold">
-                <th>HORA</th>
-                <th>PRODUCTO / PROMO</th>
+                <th id="th-col-1">HORA</th>
+                <th>PRODUCTO Y PROMO</th>
                 <th>CANTIDAD</th>
                 <th>SUBTOTAL</th>
                 <th>GANANCIA</th>
               </tr>
             </thead>
             <tbody id="pdf-filas-ventas"></tbody>
+            <tfoot id="pdf-foot-ventas" class="font-bold bg-gray-50 border-t border-gray-300"></tfoot>
           </table>
         </div>
 
-        <!-- NUEVO APARTADO: LITROS VENDIDOS ACUMULADOS -->
+        <!-- APARTADO: RESUMEN DE LITROS VENDIDOS -->
         <div class="bg-blue-50 p-4 rounded border border-blue-200">
-          <h3 class="font-bold text-sm text-blue-900 mb-2">🪣 Resumen de Litros Vendidos al Día</h3>
+          <h3 id="titulo-resumen-litros" class="font-bold text-sm text-blue-900 mb-2">Resumen de Litros Vendidos al Día</h3>
           <table class="w-full text-left pdf-table border-collapse bg-white rounded">
             <thead>
               <tr class="bg-blue-100 font-bold text-blue-900">
                 <th>PRODUCTO LÍQUIDO</th>
-                <th>TOTAL LITROS VENDIDOS</th>
+                <th id="th-col-litros">TOTAL LITROS VENDIDOS</th>
               </tr>
             </thead>
             <tbody id="pdf-filas-litros"></tbody>
           </table>
         </div>
 
+        <!-- RESUMEN FINANCIERO -->
         <div class="bg-gray-50 p-3 rounded border space-y-1.5 max-w-xs ml-auto">
           <h3 class="font-bold border-b pb-1">💰 Resumen Financiero</h3>
-          <div class="flex justify-between"><span>Total de cuentas (Clientes):</span><span id="pdf-total-cuentas" class="font-bold">0</span></div>
-          <div class="flex justify-between"><span>Total de ventas:</span><span id="pdf-total-ventas" class="font-bold">$0.00</span></div>
-          <div class="flex justify-between font-bold text-blue-800 border-t pt-1"><span>Ganancias del día:</span><span id="pdf-total-ganancias">$0.00</span></div>
+          <div class="flex justify-between"><span id="lbl-total-cuentas">Total de cuentas (Clientes):</span><span id="pdf-total-cuentas" class="font-bold">0</span></div>
+          <div class="flex justify-between"><span id="lbl-total-ventas">Total de ventas:</span><span id="pdf-total-ventas" class="font-bold">$0.00</span></div>
+          <div class="flex justify-between font-bold text-blue-800 border-t pt-1"><span id="lbl-total-ganancias">Ganancias:</span><span id="pdf-total-ganancias">$0.00</span></div>
         </div>
+      </div>
+
+      <!-- HISTORIAL / BITÁCORA DE DÍAS GUARDADOS DE LA SEMANA -->
+      <div class="bg-white p-4 rounded-lg shadow space-y-3">
+        <h3 class="font-bold text-sm border-b pb-2 text-gray-800">📅 Días Registrados en la Semana</h3>
+        <div id="lista-dias-guardados" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
       </div>
     </section>
 
   </main>
 
   <script>
-    // ServiceWorker Offline
+    // ServiceWorker
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', e => {
-          e.waitUntil(caches.open('app-v4').then(cache => cache.addAll(['./'])));
+          e.waitUntil(caches.open('app-v5').then(cache => cache.addAll(['./'])));
         });
         self.addEventListener('fetch', e => {
           e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
@@ -314,7 +336,11 @@
       if (tab === 'inventario') renderInventario();
       if (tab === 'promos') renderPromos();
       if (tab === 'otros') renderOtros();
-      if (tab === 'reportes') renderReportePDF();
+      if (tab === 'reportes') {
+        const hoyStr = new Date().toISOString().split('T')[0];
+        document.getElementById('fecha-reporte-diario').value = hoyStr;
+        actualizarVistaReporte();
+      }
     }
 
     function renderVentas() {
@@ -343,7 +369,7 @@
       gPr.innerHTML = '';
       promos.forEach(pr => {
         gPr.innerHTML += `
-          <button onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio}, ${pr.costo}, '1 Combo', 0, null)" class="p-2 border rounded bg-amber-50 hover:bg-amber-100 text-left">
+          <button onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio}, 0, '1 Combo', 0, null)" class="p-2 border rounded bg-amber-50 hover:bg-amber-100 text-left">
             <p class="font-bold text-xs text-amber-900">${pr.nombre}</p>
             <p class="text-[10px] text-amber-800 italic">${pr.desc || ''}</p>
             <p class="text-xs text-amber-700 font-semibold mt-1">$${pr.precio}</p>
@@ -361,25 +387,20 @@
           </button>
         `;
       });
+
+      renderCarrito();
     }
 
-    // APARTADO 1: VENTA POR DINERO CON REDONDEO A LITRO CERRADO
     function agregarPorDineroRedondeado() {
       const monto = parseFloat(document.getElementById('monto-dinero').value);
       const valSelect = document.getElementById('prod-dinero').value;
 
-      if (!valSelect) {
-        alert("Por favor selecciona un producto de la lista.");
-        return;
-      }
+      if (!valSelect) return alert("Por favor selecciona un producto de la lista.");
 
       const idP = parseInt(valSelect);
       const prod = productos.find(p => p.id === idP);
 
-      if (!monto || monto <= 0 || !prod) {
-        alert("Por favor ingresa un monto válido.");
-        return;
-      }
+      if (!monto || monto <= 0 || !prod) return alert("Por favor ingresa un monto válido.");
 
       const litrosExactos = monto / prod.precio;
       const litrosRedondeados = Math.ceil(litrosExactos);
@@ -391,23 +412,16 @@
       document.getElementById('prod-dinero').value = '';
     }
 
-    // APARTADO 2: VENTA DIRECTA POR LITROS
     function agregarPorLitrosDirectos() {
       const litros = parseFloat(document.getElementById('cant-litros').value);
       const valSelect = document.getElementById('prod-litros').value;
 
-      if (!valSelect) {
-        alert("Por favor selecciona un producto de la lista.");
-        return;
-      }
+      if (!valSelect) return alert("Por favor selecciona un producto de la lista.");
 
       const idP = parseInt(valSelect);
       const prod = productos.find(p => p.id === idP);
 
-      if (!litros || litros <= 0 || !prod) {
-        alert("Por favor ingresa una cantidad de litros válida.");
-        return;
-      }
+      if (!litros || litros <= 0 || !prod) return alert("Por favor ingresa una cantidad de litros válida.");
 
       const subtotal = litros * prod.precio;
       const costoTotal = prod.costo * litros;
@@ -425,17 +439,26 @@
 
     function renderCarrito() {
       const cont = document.getElementById('carrito-items');
+      if (!cont) return;
       cont.innerHTML = '';
+      
+      if (carrito.length === 0) {
+        cont.innerHTML = '<p class="text-xs text-gray-400 italic">No hay productos agregados.</p>';
+        document.getElementById('cart-total').innerText = `$0.00`;
+        document.getElementById('cart-cambio').innerText = `$0.00`;
+        return;
+      }
+
       let total = 0;
       carrito.forEach((item, idx) => {
         total += item.subtotal;
         cont.innerHTML += `
           <div class="flex justify-between items-center text-xs border-b pb-1">
             <div>
-              <p class="font-bold">${item.producto} <span class="text-[10px] text-gray-400">(${item.hora})</span></p>
-              <p class="text-gray-500">${item.cantidad} - $${item.subtotal.toFixed(2)}</p>
+              <p class="font-bold text-gray-800">${item.producto} <span class="text-[10px] text-gray-400">(${item.hora})</span></p>
+              <p class="text-gray-500">${item.cantidad} - <span class="font-semibold text-blue-700">$${item.subtotal.toFixed(2)}</span></p>
             </div>
-            <button onclick="carrito.splice(${idx},1); renderCarrito();" class="text-red-600 font-bold">✕</button>
+            <button onclick="carrito.splice(${idx},1); renderCarrito();" class="text-red-600 font-bold px-1 hover:bg-red-50 rounded">✕</button>
           </div>
         `;
       });
@@ -460,11 +483,10 @@
       carrito = [];
       document.getElementById('pago-cliente').value = '';
       renderCarrito();
-      renderVentas();
       alert("Venta registrada correctamente.");
     }
 
-    // INVENTARIO DE TAMBOS
+    // INVENTARIO
     function guardarProducto(e) {
       e.preventDefault();
       const id = document.getElementById('prod-id').value;
@@ -474,9 +496,7 @@
 
       if (id) {
         const index = productos.findIndex(p => p.id == id);
-        if (index !== -1) {
-          productos[index] = { ...productos[index], nombre, precio, costo };
-        }
+        if (index !== -1) productos[index] = { ...productos[index], nombre, precio, costo };
       } else {
         productos.push({ id: Date.now(), nombre, precio, costo });
       }
@@ -537,38 +557,19 @@
       }
     }
 
-    // COMBOS Y PROMOCIONES (Auto detección de costo real)
-    function sugerirCostoReal() {
-      const texto = document.getElementById('promo-desc').value.toLowerCase();
-      let costoSugerido = 0;
-
-      productos.forEach(p => {
-        if (texto.includes(p.nombre.toLowerCase())) {
-          // Si el texto tiene números cerca del nombre, intenta multiplicarlo por los litros
-          costoSugerido += p.costo;
-        }
-      });
-
-      if (costoSugerido > 0) {
-        document.getElementById('promo-costo').value = costoSugerido;
-      }
-    }
-
+    // COMBOS / PROMOS (SIN CAMPO COSTO REAL)
     function guardarPromo(e) {
       e.preventDefault();
       const id = document.getElementById('promo-id').value;
       const nombre = document.getElementById('promo-nombre').value;
       const desc = document.getElementById('promo-desc').value;
       const precio = parseFloat(document.getElementById('promo-precio').value);
-      const costo = parseFloat(document.getElementById('promo-costo').value);
 
       if (id) {
         const idx = promos.findIndex(p => p.id == id);
-        if (idx !== -1) {
-          promos[idx] = { ...promos[idx], nombre, desc, precio, costo };
-        }
+        if (idx !== -1) promos[idx] = { ...promos[idx], nombre, desc, precio };
       } else {
-        promos.push({ id: Date.now(), nombre, desc, precio, costo });
+        promos.push({ id: Date.now(), nombre, desc, precio });
       }
 
       localStorage.setItem('pos_promos', JSON.stringify(promos));
@@ -584,7 +585,6 @@
       document.getElementById('promo-nombre').value = p.nombre;
       document.getElementById('promo-desc').value = p.desc;
       document.getElementById('promo-precio').value = p.precio;
-      document.getElementById('promo-costo').value = p.costo;
 
       document.getElementById('promo-form-title').innerText = "Editar Combo o Promoción";
       document.getElementById('btn-save-promo').innerText = "Actualizar Combo";
@@ -596,7 +596,6 @@
       document.getElementById('promo-nombre').value = '';
       document.getElementById('promo-desc').value = '';
       document.getElementById('promo-precio').value = '';
-      document.getElementById('promo-costo').value = '';
 
       document.getElementById('promo-form-title').innerText = "Crear / Editar Combo o Promoción";
       document.getElementById('btn-save-promo').innerText = "Guardar Combo / Promoción";
@@ -612,7 +611,7 @@
             <div>
               <p class="font-bold text-amber-900">${p.nombre}</p>
               <p class="text-gray-600 text-[11px]">${p.desc}</p>
-              <p class="text-xs text-amber-700 font-semibold">$${p.precio} (Costo real detectado: $${p.costo})</p>
+              <p class="text-xs text-amber-700 font-semibold">$${p.precio}</p>
             </div>
             <div class="space-x-1">
               <button onclick="editarPromo(${p.id})" class="text-blue-600 font-bold bg-blue-100 px-2 py-1 rounded">✏️ Editar</button>
@@ -640,9 +639,7 @@
 
       if (id) {
         const idx = otros.findIndex(o => o.id == id);
-        if (idx !== -1) {
-          otros[idx] = { ...otros[idx], nombre, precio };
-        }
+        if (idx !== -1) otros[idx] = { ...otros[idx], nombre, precio };
       } else {
         otros.push({ id: Date.now(), nombre, precio });
       }
@@ -701,50 +698,153 @@
       }
     }
 
-    // REPORTES Y PDF (SUMA ACUMULADA DE LITROS)
-    function renderReportePDF() {
-      const hoy = new Date();
-      document.getElementById('pdf-fecha').innerText = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    // LÓGICA DE REPORTES (DIARIO Y SEMANAL)
+    function actualizarVistaReporte() {
+      const tipo = document.getElementById('tipo-reporte').value;
+      const wrapFecha = document.getElementById('wrapper-fecha-diario');
+      if (tipo === 'semanal') {
+        wrapFecha.classList.add('hidden');
+      } else {
+        wrapFecha.classList.remove('hidden');
+      }
+      renderReportePDF();
+      renderHistorialDiasSemana();
+    }
 
-      const fechaHoy = hoy.toISOString().split('T')[0];
-      const cuentasHoy = cuentas.filter(c => c.fecha === fechaHoy);
+    // Calcula el número de semana dentro del mes (Semana 1, 2, 3 o 4)
+    function getSemanaDelMes(fecha) {
+      const primerDiaMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+      const diaMes = fecha.getDate();
+      const offsetInicio = (primerDiaMes.getDay() + 6) % 7; // Lunes 0
+      return Math.ceil((diaMes + offsetInicio) / 7);
+    }
 
-      const tbodyVentas = document.getElementById('pdf-filas-ventas');
-      const tbodyLitros = document.getElementById('pdf-filas-litros');
+    // Obtiene rango de fechas de Lunes a Domingo para la fecha dada
+    function getRangoSemana(fechaRef) {
+      const d = new Date(fechaRef);
+      const day = d.getDay();
+      const diffLunes = d.getDate() - day + (day === 0 ? -6 : 1); 
       
+      const lunes = new Date(d.setDate(diffLunes));
+      const domingo = new Date(lunes);
+      domingo.setDate(lunes.getDate() + 6);
+
+      return { lunes, domingo };
+    }
+
+    function renderReportePDF() {
+      const tipo = document.getElementById('tipo-reporte').value;
+      const tbodyVentas = document.getElementById('pdf-filas-ventas');
+      const tfootVentas = document.getElementById('pdf-foot-ventas');
+      const tbodyLitros = document.getElementById('pdf-filas-litros');
+
       tbodyVentas.innerHTML = '';
+      tfootVentas.innerHTML = '';
       tbodyLitros.innerHTML = '';
 
       let totalVentas = 0;
       let totalGanancias = 0;
       let acumuladoLitros = {};
+      let totalCuentas = 0;
 
-      cuentasHoy.forEach(c => {
-        c.items.forEach(i => {
-          totalVentas += i.subtotal;
-          totalGanancias += i.ganancia;
+      if (tipo === 'diario') {
+        const fechaSel = document.getElementById('fecha-reporte-diario').value;
+        const fObj = new Date(fechaSel + 'T00:00:00');
 
-          // Suma de litros vendidos si es un producto líquido
-          if (i.litros && i.litros > 0) {
-            acumuladoLitros[i.producto] = (acumuladoLitros[i.producto] || 0) + i.litros;
-          }
+        document.getElementById('pdf-titulo-principal').innerText = "Reporte de Ventas Diario";
+        document.getElementById('pdf-subtitulo-fecha').innerText = fObj.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-          tbodyVentas.innerHTML += `
-            <tr>
-              <td>${i.hora || '--:--'}</td>
-              <td class="font-bold">${i.producto}</td>
-              <td>${i.cantidad}</td>
-              <td>$${i.subtotal.toFixed(2)}</td>
-              <td>$${i.ganancia.toFixed(2)}</td>
-            </tr>
-          `;
+        document.getElementById('th-col-1').innerText = "HORA";
+        document.getElementById('titulo-resumen-litros').innerText = "Resumen de Litros Vendidos al Día";
+        document.getElementById('th-col-litros').innerText = "TOTAL LITROS VENDIDOS";
+        document.getElementById('lbl-total-cuentas').innerText = "Total de cuentas (Clientes):";
+        document.getElementById('lbl-total-ventas').innerText = "Total de ventas del día:";
+        document.getElementById('lbl-total-ganancias').innerText = "Ganancias del día:";
+
+        const cuentasDia = cuentas.filter(c => c.fecha === fechaSel);
+        totalCuentas = cuentasDia.length;
+
+        cuentasDia.forEach(c => {
+          c.items.forEach(i => {
+            totalVentas += i.subtotal;
+            totalGanancias += i.ganancia;
+
+            if (i.litros && i.litros > 0) {
+              acumuladoLitros[i.producto] = (acumuladoLitros[i.producto] || 0) + i.litros;
+            }
+
+            tbodyVentas.innerHTML += `
+              <tr>
+                <td>${i.hora || '--:--'}</td>
+                <td class="font-bold">${i.producto}</td>
+                <td>${i.cantidad}</td>
+                <td>$${i.subtotal.toFixed(2)}</td>
+                <td>$${i.ganancia.toFixed(2)}</td>
+              </tr>
+            `;
+          });
         });
-      });
 
-      // Renderizar apartado de litros acumulados al día
+      } else {
+        // MODO SEMANAL
+        const hoy = new Date();
+        const { lunes, domingo } = getRangoSemana(hoy);
+
+        const numSemana = getSemanaDelMes(lunes);
+        const mesNombre = lunes.toLocaleDateString('es-MX', { month: 'long' });
+        const anio = lunes.getFullYear();
+
+        document.getElementById('pdf-titulo-principal').innerText = `Reporte de Ventas Semanal - Semana ${numSemana} de ${mesNombre} de ${anio}`;
+        document.getElementById('pdf-subtitulo-fecha').innerText = `Del Lunes ${lunes.getDate()} al Domingo ${domingo.getDate()} de ${mesNombre} ${anio}`;
+
+        document.getElementById('th-col-1').innerText = "FECHA";
+        document.getElementById('titulo-resumen-litros').innerText = "Resumen de Litros Vendidos a la Semana";
+        document.getElementById('th-col-litros').innerText = "TOTAL LITROS VENDIDOS SEMANALMENTE";
+        document.getElementById('lbl-total-cuentas').innerText = "Total de cuentas a la semana:";
+        document.getElementById('lbl-total-ventas').innerText = "Total de ventas de la semana:";
+        document.getElementById('lbl-total-ganancias').innerText = "Ganancias de la semana:";
+
+        const strLunes = lunes.toISOString().split('T')[0];
+        const strDomingo = domingo.toISOString().split('T')[0];
+
+        const cuentasSemana = cuentas.filter(c => c.fecha >= strLunes && c.fecha <= strDomingo);
+        totalCuentas = cuentasSemana.length;
+
+        cuentasSemana.forEach(c => {
+          c.items.forEach(i => {
+            totalVentas += i.subtotal;
+            totalGanancias += i.ganancia;
+
+            if (i.litros && i.litros > 0) {
+              acumuladoLitros[i.producto] = (acumuladoLitros[i.producto] || 0) + i.litros;
+            }
+
+            tbodyVentas.innerHTML += `
+              <tr>
+                <td>${c.fecha}</td>
+                <td class="font-bold">${i.producto}</td>
+                <td>${i.cantidad}</td>
+                <td>$${i.subtotal.toFixed(2)}</td>
+                <td>$${i.ganancia.toFixed(2)}</td>
+              </tr>
+            `;
+          });
+        });
+
+        // Totales sumados hasta abajo en la tabla semanal
+        tfootVentas.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-right font-bold p-2">TOTALES ACUMULADOS:</td>
+            <td class="text-blue-900 font-bold p-2">$${totalVentas.toFixed(2)}</td>
+            <td class="text-emerald-900 font-bold p-2">$${totalGanancias.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+
+      // Render de tabla de litros
       const nombresLiquidos = Object.keys(acumuladoLitros);
       if (nombresLiquidos.length === 0) {
-        tbodyLitros.innerHTML = `<tr><td colspan="2" class="text-gray-400 italic">No se han vendido productos líquidos hoy.</td></tr>`;
+        tbodyLitros.innerHTML = `<tr><td colspan="2" class="text-gray-400 italic">No hay registro de productos líquidos vendidos.</td></tr>`;
       } else {
         nombresLiquidos.forEach(prod => {
           tbodyLitros.innerHTML += `
@@ -756,14 +856,53 @@
         });
       }
 
-      document.getElementById('pdf-total-cuentas').innerText = cuentasHoy.length;
+      document.getElementById('pdf-total-cuentas').innerText = totalCuentas;
       document.getElementById('pdf-total-ventas').innerText = `$${totalVentas.toFixed(2)}`;
       document.getElementById('pdf-total-ganancias').innerText = `$${totalGanancias.toFixed(2)}`;
     }
 
-    function generarPDFDiario() {
+    function renderHistorialDiasSemana() {
+      const cont = document.getElementById('lista-dias-guardados');
+      cont.innerHTML = '';
+
+      const { lunes, domingo } = getRangoSemana(new Date());
+      const strLunes = lunes.toISOString().split('T')[0];
+      const strDomingo = domingo.toISOString().split('T')[0];
+
+      // Filtra las fechas únicas que tienen ventas registradas en esta semana
+      const fechasUnicas = [...new Set(cuentas.filter(c => c.fecha >= strLunes && c.fecha <= strDomingo).map(c => c.fecha))];
+
+      if (fechasUnicas.length === 0) {
+        cont.innerHTML = '<p class="text-gray-400 italic col-span-4">No hay días guardados esta semana.</p>';
+        return;
+      }
+
+      fechasUnicas.sort().forEach(f => {
+        const fObj = new Date(f + 'T00:00:00');
+        const diaNombre = fObj.toLocaleDateString('es-MX', { weekday: 'long' });
+        
+        cont.innerHTML += `
+          <button onclick="seleccionarDiaGuardado('${f}')" class="p-2 border rounded bg-blue-50 hover:bg-blue-100 text-left font-bold text-blue-900">
+            📌 ${diaNombre.toUpperCase()}
+            <span class="block text-[10px] font-normal text-gray-600">${f}</span>
+          </button>
+        `;
+      });
+    }
+
+    function seleccionarDiaGuardado(fechaStr) {
+      document.getElementById('tipo-reporte').value = 'diario';
+      document.getElementById('wrapper-fecha-diario').classList.remove('hidden');
+      document.getElementById('fecha-reporte-diario').value = fechaStr;
+      renderReportePDF();
+    }
+
+    function descargarPDFActual() {
+      const tipo = document.getElementById('tipo-reporte').value;
       const element = document.getElementById('pdf-container');
-      html2pdf().set({ margin: 0.5, filename: `Reporte_${new Date().toISOString().split('T')[0]}.pdf`, html2canvas: { scale: 2 } }).from(element).save();
+      const nombreArchivo = tipo === 'semanal' ? `Cierre_Semanal_${new Date().toISOString().split('T')[0]}.pdf` : `Reporte_Diario_${document.getElementById('fecha-reporte-diario').value}.pdf`;
+
+      html2pdf().set({ margin: 0.5, filename: nombreArchivo, html2canvas: { scale: 2 } }).from(element).save();
     }
 
     // Inicializar
