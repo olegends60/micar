@@ -3,707 +3,844 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Punto de Venta - Casa de Letty Paz</title>
-  
-  <!-- Generador Directo de PDF -->
+  <title>Sistema Punto de Venta e Inventario</title>
+
+  <!-- TailWind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Generador de PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  
-  <!-- Fuente tipográfica moderna -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --bg-dark: #0b0f17;
-      --card-bg: #151c28;
-      --card-inner: #1e293b;
-      --primary: #0d9488;
-      --primary-hover: #115e59;
-      --primary-gradient: linear-gradient(135deg, #0d9488 0%, #059669 100%);
-      --accent-teal: #2dd4bf;
-      --accent-green: #10b981;
-      --accent-red: #f43f5e;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: rgba(255, 255, 255, 0.08);
-      --border-glow: rgba(45, 212, 191, 0.2);
-    }
-
-    * { 
-      box-sizing: border-box; 
-      margin: 0; 
-      padding: 0; 
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-    }
-    
-    html, body { 
-      overflow-x: hidden; 
-      max-width: 100%; 
-      background-color: var(--bg-dark); 
-      color: var(--text-main); 
-    }
-    
-    body { 
-      padding: 16px; 
-      display: flex; 
-      justify-content: center; 
-      background-image: 
-        radial-gradient(circle at 50% 0%, rgba(13, 148, 136, 0.15) 0%, transparent 60%),
-        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
-      min-height: 100vh;
-    }
-
-    .app-container { 
-      width: 100%; 
-      max-width: 520px; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 16px; 
-    }
-
-    /* TARJETA SUPERIOR DE MÉTRICAS */
-    .top-card {
-      background: var(--primary-gradient);
-      border-radius: 24px;
-      padding: 22px;
-      color: white;
-      box-shadow: 0 12px 32px -8px rgba(13, 148, 136, 0.5);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .top-card::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .top-header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      margin-bottom: 16px; 
-    }
-    .top-header h2 { 
-      font-size: 22px; 
-      font-weight: 800; 
-      letter-spacing: -0.5px;
-    }
-    .top-header span { 
-      font-size: 13px; 
-      opacity: 0.9; 
-      font-weight: 600; 
-      background: rgba(255, 255, 255, 0.18);
-      padding: 4px 12px;
-      border-radius: 20px;
-      backdrop-filter: blur(8px);
-      text-transform: capitalize;
-    }
-    .top-stats { display: flex; gap: 12px; }
-    .stat-box {
-      background: rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      flex: 1;
-      padding: 14px 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-    .stat-box p { 
-      font-size: 12px; 
-      opacity: 0.85; 
-      margin-bottom: 4px; 
-      font-weight: 600; 
-      letter-spacing: 0.2px;
-    }
-    .stat-box h3 { 
-      font-size: 22px; 
-      font-weight: 800; 
-      letter-spacing: -0.5px;
-    }
-
-    /* PESTAÑAS Y BANDERAS */
-    .nav-tabs {
-      background: var(--card-bg);
-      border-radius: 18px;
-      padding: 6px;
-      display: flex;
-      gap: 6px;
-      border: 1px solid var(--border-color);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 12px 8px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-weight: 700;
-      font-size: 13px;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      white-space: nowrap;
-    }
-    .tab-btn:hover {
-      color: var(--text-main);
-    }
-    .tab-btn.active {
-      background: var(--card-inner);
-      color: var(--accent-teal);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      border: 1px solid var(--border-glow);
-    }
-    .tab-content { display: none; flex-direction: column; gap: 16px; }
-    .tab-content.active { display: flex; }
-
-    /* TARJETAS PRINCIPALES */
-    .card {
-      background: var(--card-bg);
-      border-radius: 22px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      border: 1px solid var(--border-color);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    }
-    .card-title { 
-      font-size: 18px; 
-      font-weight: 800; 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      letter-spacing: -0.3px;
-    }
-
-    /* SECCIONES DE INGRESO RÁPIDO Y CÁLCULOS */
-    .input-section {
-      background: var(--card-inner);
-      border-radius: 18px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      border: 1px solid var(--border-color);
-      transition: border-color 0.2s;
-    }
-    .input-section:focus-within {
-      border-color: rgba(45, 212, 191, 0.4);
-    }
-    .input-section-title { 
-      font-size: 13px; 
-      font-weight: 700; 
-      color: var(--accent-teal); 
-      display: flex; 
-      align-items: center; 
-      gap: 6px; 
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .input-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 110px; }
-    .form-group label { 
-      font-size: 12px; 
-      color: var(--text-muted); 
-      font-weight: 600; 
-    }
-
-    select, input {
-      background: var(--bg-dark);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 12px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      font-weight: 600;
-      outline: none;
-      width: 100%;
-      transition: all 0.2s ease;
-    }
-    select:focus, input:focus { 
-      border-color: var(--accent-teal); 
-      box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
-    }
-
-    .btn {
-      background: var(--primary-gradient);
-      color: white;
-      border: none;
-      padding: 12px 16px;
-      border-radius: 14px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 14px rgba(13, 148, 136, 0.3);
-    }
-    .btn:hover {
-      filter: brightness(1.1);
-      box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
-    }
-    .btn:active { transform: scale(0.96); }
-    .btn-secondary { 
-      background: var(--card-inner); 
-      color: var(--text-main); 
-      border: 1px solid var(--border-color);
-      box-shadow: none;
-    }
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.08);
-      box-shadow: none;
-    }
-
-    /* BOTOES DE TOQUE RÁPIDO */
-    .quick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .quick-btn {
-      background: var(--card-inner);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 12px 14px;
-      text-align: left;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .quick-btn:hover {
-      border-color: var(--accent-teal);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-    .quick-btn:active { 
-      transform: translateY(0);
-      background: var(--primary); 
-    }
-    .quick-btn p { font-size: 14px; font-weight: 700; color: var(--text-main); }
-    .quick-btn span { font-size: 12px; color: var(--accent-teal); font-weight: 700; }
-
-    /* CARRITO DE COMPRA */
-    .cart-list { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 14px; }
-    .cart-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--card-inner);
-      padding: 12px 14px;
-      border-radius: 16px;
-      border: 1px solid var(--border-color);
-    }
-    .cart-item-info h4 { font-size: 14px; font-weight: 700; color: var(--text-main); }
-    .cart-item-info p { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
-
-    /* CAJA DINÁMICA DE CAMBIO EN VERDE / ROJO */
-    .cambio-box {
-      border-radius: 20px;
-      padding: 16px;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-    .cambio-box.verde {
-      background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
-    }
-    .cambio-box.verde p { font-size: 13px; color: var(--accent-green); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .cambio-box.verde h3 { font-size: 28px; color: var(--accent-green); font-weight: 800; margin-top: 2px; letter-spacing: -0.5px; }
-    
-    .cambio-box.rojo {
-      background: rgba(244, 63, 94, 0.08);
-      border: 1px solid rgba(244, 63, 94, 0.3);
-      padding: 14px;
-      box-shadow: 0 4px 20px rgba(244, 63, 94, 0.15);
-    }
-    .cambio-box.rojo h3 { font-size: 22px; color: var(--accent-red); font-weight: 800; }
-
-    /* REPORTE EN PDF RECEPTÁCULO OCULTO */
-    #pdf-container { display: none; background: white; color: black; padding: 20px; font-family: Arial, sans-serif; }
-    #pdf-container table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    #pdf-container th, #pdf-container td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+    body { touch-action: manipulation; }
+    .pdf-table th, .pdf-table td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
   </style>
 </head>
-<body>
+<body class="bg-gray-100 font-sans text-gray-800 antialiased">
 
-  <div class="app-container">
-
-    <!-- 1. CABECERA Y RÉCORD DEL DÍA -->
-    <div class="top-card">
-      <div class="top-header">
-        <h2>Hoy</h2>
-        <span id="txt-fecha-hoy"></span>
-      </div>
-      <div class="top-stats">
-        <div class="stat-box">
-          <p id="txt-num-cuentas">Cuentas (0)</p>
-          <h3 id="txt-total-ventas">$0.00</h3>
-        </div>
-        <div class="stat-box">
-          <p>Ganancias</p>
-          <h3 id="txt-total-ganancias">$0.00</h3>
-        </div>
-      </div>
+  <!-- Navegación Principal -->
+  <nav class="bg-blue-800 text-white p-2 shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-center gap-1 sm:gap-2 text-xs sm:text-sm">
+      <button onclick="switchTab('ventas')" class="px-3 py-2 bg-blue-700 hover:bg-blue-900 rounded font-semibold flex-1 sm:flex-initial text-center">🛒 Caja / Ventas</button>
+      <button onclick="switchTab('inventario')" class="px-3 py-2 bg-blue-700 hover:bg-blue-900 rounded font-semibold flex-1 sm:flex-initial text-center">📦 Inventario Tambos</button>
+      <button onclick="switchTab('promos')" class="px-3 py-2 bg-blue-700 hover:bg-blue-900 rounded font-semibold flex-1 sm:flex-initial text-center">🎁 Combos / Promos</button>
+      <button onclick="switchTab('otros')" class="px-3 py-2 bg-blue-700 hover:bg-blue-900 rounded font-semibold flex-1 sm:flex-initial text-center">🧼 Otros Productos</button>
+      <button onclick="switchTab('reportes')" class="px-3 py-2 bg-blue-700 hover:bg-blue-900 rounded font-semibold flex-1 sm:flex-initial text-center">📊 Reportes y PDF</button>
     </div>
+  </nav>
 
-    <!-- NAVEGACIÓN -->
-    <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('ventas')">🛒 Caja / Ventas</button>
-      <button class="tab-btn" onclick="switchTab('inventario')">📦 Inventario</button>
-      <button class="tab-btn" onclick="switchTab('reportes')">📊 Reportes</button>
-    </div>
+  <main class="p-3 sm:p-6 max-w-7xl mx-auto space-y-6">
 
-    <!-- 2. PESTAÑA PRINCIPAL: CAJA / VENTAS -->
-    <div id="tab-ventas" class="tab-content active">
-
-      <div class="card">
-        <div class="card-title">
-          <span>🧾 Venta Directa</span>
-          <button class="btn btn-secondary" onclick="vaciarCarrito()">Limpiar</button>
-        </div>
-
-        <!-- SECCIÓN 1: VENTA POR DINERO ($) -->
-        <div class="input-section">
-          <span class="input-section-title">💵 Venta por Dinero ($)</span>
-          <div class="input-row">
-            <div class="form-group">
-              <label>Monto ($)</label>
-              <input type="number" step="0.01" id="monto-dinero" placeholder="$100.00">
-            </div>
-            <div class="form-group">
-              <label>Producto</label>
-              <select id="prod-dinero"></select>
-            </div>
-            <button class="btn" onclick="agregarPorDinero()">+ Cobrar $</button>
+    <!-- SECCIÓN 1: CAJA / TERMINAL DE VENTAS -->
+    <section id="tab-ventas" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      
+      <!-- Panel de Selección e Ingreso de Productos -->
+      <div class="lg:col-span-2 bg-white p-4 sm:p-5 rounded-lg shadow space-y-4">
+        
+        <!-- APARTADO 1: Venta por Dinero ($) -->
+        <div class="bg-emerald-50 border border-emerald-200 p-3 sm:p-4 rounded-lg space-y-2">
+          <span class="text-xs sm:text-sm font-bold text-emerald-900 block">💵 Venta por Dinero ($)</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-1">
+            <input type="number" step="0.01" id="monto-dinero" placeholder="Monto deseado ($)" class="border p-2 rounded text-sm w-full bg-white">
+            <select id="prod-dinero" class="border p-2 rounded text-sm w-full bg-white"></select>
+            <button onclick="agregarPorDineroRedondeado()" class="bg-emerald-700 text-white p-2 rounded text-sm font-bold hover:bg-emerald-800 w-full">
+              ➕ Cobrar por Dinero
+            </button>
           </div>
         </div>
 
-        <!-- SECCIÓN 2: VENTA POR LITROS (L) -->
-        <div class="input-section">
-          <span class="input-section-title">🪣 Venta por Litros (L)</span>
-          <div class="input-row">
-            <div class="form-group">
-              <label>Litros (L)</label>
-              <input type="number" step="0.1" id="cant-litros" placeholder="5.0">
-            </div>
-            <div class="form-group">
-              <label>Producto</label>
-              <select id="prod-litros"></select>
-            </div>
-            <button class="btn" onclick="agregarPorLitros()">+ Litros</button>
+        <!-- APARTADO 2: Venta por Litros (L) -->
+        <div class="bg-blue-50 border border-blue-200 p-3 sm:p-4 rounded-lg space-y-2">
+          <span class="text-xs sm:text-sm font-bold text-blue-900 block">🪣 Venta por Litros (L)</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-1">
+            <input type="number" step="0.1" id="cant-litros" placeholder="Litros pedidos (ej: 10)" class="border p-2 rounded text-sm w-full bg-white">
+            <select id="prod-litros" class="border p-2 rounded text-sm w-full bg-white"></select>
+            <button onclick="agregarPorLitrosDirectos()" class="bg-blue-700 text-white p-2 rounded text-sm font-bold hover:bg-blue-800 w-full">
+              ➕ Agregar Litros
+            </button>
           </div>
         </div>
 
-        <!-- SECCIÓN 3: TOQUE RÁPIDO (1 LITRO) -->
-        <div class="form-group">
-          <label>⚡ TOQUE RÁPIDO (1 LITRO)</label>
-          <div id="grid-rapido" class="quick-grid"></div>
+        <!-- Toque Rápido (1 Litro) -->
+        <div>
+          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Líquidos (Toque rápido para 1 Litro)</h3>
+          <div id="grid-productos" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
         </div>
 
-        <!-- CARRITO DE COMPRA -->
-        <div id="cart-container" class="cart-list"></div>
+        <!-- Combos / Promos -->
+        <div>
+          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Combos y Promociones</h3>
+          <div id="grid-promos" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+        </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: 800; margin-top: 5px;">
-          <span>Total:</span>
-          <span id="cart-total" style="color: var(--accent-teal); font-size: 22px; font-weight: 800;">$0.00</span>
+        <!-- Otros Productos -->
+        <div>
+          <h3 class="font-bold text-xs text-gray-500 mb-2 uppercase">Otros Productos</h3>
+          <div id="grid-otros" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
         </div>
       </div>
 
-      <!-- COBRO Y CÁLCULO DE CAMBIO -->
-      <div class="card">
-        <div class="card-title">💳 Registrar Pago</div>
-        <div class="form-group">
-          <label>Paga con ($):</label>
-          <input type="number" id="input-pago" placeholder="0.00" oninput="calcularCambio()">
+      <!-- Cuenta / Carrito Actual -->
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow flex flex-col justify-between">
+        <div>
+          <h2 class="text-lg font-bold border-b pb-2 text-gray-800 mb-3">Cuenta Actual</h2>
+          <div id="carrito-items" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <p class="text-xs text-gray-400 italic">No hay productos agregados.</p>
+          </div>
         </div>
 
-        <!-- CAJA VERDE / ROJO -->
-        <div id="box-cambio" class="cambio-box verde">
-          <p id="lbl-cambio">Cambio</p>
-          <h3 id="txt-cambio">$0.00</h3>
+        <div class="border-t pt-3 mt-4 space-y-3">
+          <div class="flex justify-between text-base font-bold">
+            <span>Total:</span>
+            <span id="cart-total" class="text-blue-800">$0.00</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Paga con ($):</label>
+            <input type="number" id="pago-cliente" oninput="calcularCambio()" placeholder="Monto entregado" class="w-full border p-2 rounded text-base font-bold">
+          </div>
+
+          <div class="flex justify-between text-sm font-semibold text-emerald-800 bg-emerald-50 p-2 rounded">
+            <span>Cambio:</span>
+            <span id="cart-cambio">$0.00</span>
+          </div>
+
+          <button onclick="cobrarVenta()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow text-sm">
+            💳 REGISTRAR Y COBRAR
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: INVENTARIO DE TAMBOS -->
+    <section id="tab-inventario" class="hidden space-y-4 sm:space-y-6">
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
+        <h2 id="inv-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar / Editar Producto Líquido</h2>
+        <form onsubmit="guardarProducto(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <input type="hidden" id="prod-id">
+          <div>
+            <label class="text-xs font-bold text-gray-600">Nombre del producto:</label>
+            <input type="text" id="prod-nombre" placeholder="ej. Fabuloso" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Precio Venta/L ($):</label>
+            <input type="number" step="0.01" id="prod-precio" placeholder="Precio a la gente" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Costo de compra ($):</label>
+            <input type="number" step="0.01" id="prod-costo" placeholder="A cómo te lo dan a ti" required class="border p-2 rounded w-full">
+          </div>
+          
+          <div class="sm:col-span-3 flex gap-2">
+            <button type="submit" id="btn-save-prod" class="bg-blue-700 text-white font-bold py-2 px-4 rounded flex-1">Guardar Producto</button>
+            <button type="button" id="btn-cancel-prod" onclick="cancelarEdicionProd()" class="bg-gray-400 text-white font-bold py-2 px-4 rounded hidden">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow overflow-x-auto">
+        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Lista de Productos Líquidos</h2>
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-gray-100 border-b">
+              <th class="p-2">Producto</th>
+              <th class="p-2">Precio Venta/L</th>
+              <th class="p-2">Costo Compra/L</th>
+              <th class="p-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-productos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: COMBOS Y PROMOCIONES (SIN COSTO REAL) -->
+    <section id="tab-promos" class="hidden space-y-4">
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
+        <h2 id="promo-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Crear / Editar Combo o Promoción</h2>
+        <form onsubmit="guardarPromo(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <input type="hidden" id="promo-id">
+          <div>
+            <label class="text-xs font-bold text-gray-600">Nombre del Combo:</label>
+            <input type="text" id="promo-nombre" placeholder="ej. Paquete Limpieza" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Productos que incluye:</label>
+            <input type="text" id="promo-desc" placeholder="ej. 1L Cloro + 1L Fabuloso" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Precio de Venta Combo ($):</label>
+            <input type="number" step="0.01" id="promo-precio" placeholder="Precio promocional" required class="border p-2 rounded w-full">
+          </div>
+          <div class="sm:col-span-3 flex gap-2">
+            <button type="submit" id="btn-save-promo" class="bg-blue-700 text-white font-bold py-2 rounded flex-1">Guardar Combo / Promoción</button>
+            <button type="button" id="btn-cancel-promo" onclick="cancelarEdicionPromo()" class="bg-gray-400 text-white font-bold py-2 rounded px-4 hidden">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="font-bold text-sm mb-2">Combos y Promociones Guardados</h3>
+        <div id="lista-promos-mng" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 4: OTROS PRODUCTOS -->
+    <section id="tab-otros" class="hidden space-y-4">
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow">
+        <h2 id="otro-form-title" class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Agregar / Editar Otro Producto</h2>
+        <form onsubmit="guardarOtro(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <input type="hidden" id="otro-id">
+          <div>
+            <label class="text-xs font-bold text-gray-600">Nombre del Producto:</label>
+            <input type="text" id="otro-nombre" placeholder="ej. Fibra verde, Jalador" required class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600">Precio de Venta ($):</label>
+            <input type="number" step="0.01" id="otro-precio" placeholder="Precio al público" required class="border p-2 rounded w-full">
+          </div>
+          <div class="flex items-end gap-2">
+            <button type="submit" id="btn-save-otro" class="bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">Guardar Producto</button>
+            <button type="button" id="btn-cancel-otro" onclick="cancelarEdicionOtro()" class="bg-gray-400 text-white font-bold py-2 px-4 rounded hidden">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-white p-4 sm:p-5 rounded-lg shadow overflow-x-auto">
+        <h2 class="text-base font-bold border-b pb-2 text-gray-800 mb-3">Lista de Otros Productos Registrados</h2>
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-gray-100 border-b">
+              <th class="p-2">Nombre del Producto</th>
+              <th class="p-2">Precio de Venta</th>
+              <th class="p-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-otros"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 5: REPORTES DIARIOS Y SEMANALES EN PDF -->
+    <section id="tab-reportes" class="hidden space-y-6">
+      
+      <!-- Selector de Modo de Reporte -->
+      <div class="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex gap-2 items-center">
+          <label class="text-xs font-bold text-gray-700">Modo de Reporte:</label>
+          <select id="tipo-reporte" onchange="actualizarVistaReporte()" class="border p-2 rounded text-xs font-bold bg-gray-50">
+            <option value="diario">📅 Reporte Diario (Seleccionar día)</option>
+            <option value="semanal">📆 Reporte Cierre Semanal</option>
+          </select>
         </div>
 
-        <button class="btn" style="padding: 16px; font-size: 15px; font-weight: 800;" onclick="cobrarVenta()">REGISTRAR Y COBRAR</button>
-      </div>
-
-    </div>
-
-    <!-- 3. INVENTARIO -->
-    <div id="tab-inventario" class="tab-content">
-      <div class="card">
-        <div class="card-title">📦 Productos Registrados</div>
-        <div id="lista-inventario" style="display: flex; flex-direction: column; gap: 8px;"></div>
-      </div>
-    </div>
-
-    <!-- 4. REPORTES Y PDF -->
-    <div id="tab-reportes" class="tab-content">
-      <div class="card">
-        <div class="card-title">
-          <span>📊 Ventas del Día</span>
-          <button class="btn btn-secondary" onclick="descargarPDF()">📄 Exportar PDF</button>
+        <div id="wrapper-fecha-diario" class="flex gap-2 items-center">
+          <label class="text-xs font-bold text-gray-700">Ver día guardado:</label>
+          <input type="date" id="fecha-reporte-diario" onchange="renderReportePDF()" class="border p-1.5 rounded text-xs bg-gray-50">
         </div>
-        <div id="lista-historial-dia" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+        <div class="flex gap-2">
+          <button onclick="descargarPDFActual()" class="bg-blue-800 text-white px-4 py-2 rounded shadow text-xs font-bold">📄 Descargar PDF</button>
+        </div>
       </div>
-    </div>
 
-  </div>
+      <!-- PLANTILLA DE REPORTES EN PDF -->
+      <div id="pdf-container" class="bg-white p-4 sm:p-8 rounded shadow max-w-2xl mx-auto border text-xs space-y-6">
+        <div class="border-b pb-2">
+          <h1 id="pdf-titulo-principal" class="text-xl font-bold text-gray-900">Reporte de Ventas Diario</h1>
+          <p id="pdf-subtitulo-fecha" class="text-xs text-gray-500 italic"></p>
+        </div>
 
-  <!-- PLANTILLA REPORTE OCULTO PARA PDF -->
-  <div id="pdf-container">
-    <h2>Reporte de Ventas - Casa de Letty Paz</h2>
-    <p id="pdf-fecha-str"></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Hora</th>
-          <th>Producto</th>
-          <th>Cantidad</th>
-          <th>Subtotal</th>
-        </tr>
-      </thead>
-      <tbody id="pdf-filas"></tbody>
-    </table>
-    <h3 style="margin-top: 15px; text-align: right;" id="pdf-total-str">Total: $0.00</h3>
-  </div>
+        <div>
+          <h3 class="font-bold text-sm mb-2 text-gray-800">Detalle de Ventas</h3>
+          <table class="w-full text-left pdf-table border-collapse mb-4">
+            <thead>
+              <tr class="bg-gray-100 font-bold">
+                <th id="th-col-1">HORA</th>
+                <th>PRODUCTO Y PROMO</th>
+                <th>CANTIDAD</th>
+                <th>SUBTOTAL</th>
+                <th>GANANCIA</th>
+              </tr>
+            </thead>
+            <tbody id="pdf-filas-ventas"></tbody>
+            <tfoot id="pdf-foot-ventas" class="font-bold bg-gray-50 border-t border-gray-300"></tfoot>
+          </table>
+        </div>
+
+        <!-- APARTADO: RESUMEN DE LITROS VENDIDOS -->
+        <div class="bg-blue-50 p-4 rounded border border-blue-200">
+          <h3 id="titulo-resumen-litros" class="font-bold text-sm text-blue-900 mb-2">Resumen de Litros Vendidos al Día</h3>
+          <table class="w-full text-left pdf-table border-collapse bg-white rounded">
+            <thead>
+              <tr class="bg-blue-100 font-bold text-blue-900">
+                <th>PRODUCTO LÍQUIDO</th>
+                <th id="th-col-litros">TOTAL LITROS VENDIDOS</th>
+              </tr>
+            </thead>
+            <tbody id="pdf-filas-litros"></tbody>
+          </table>
+        </div>
+
+        <!-- RESUMEN FINANCIERO -->
+        <div class="bg-gray-50 p-3 rounded border space-y-1.5 max-w-xs ml-auto">
+          <h3 class="font-bold border-b pb-1">💰 Resumen Financiero</h3>
+          <div class="flex justify-between"><span id="lbl-total-cuentas">Total de cuentas (Clientes):</span><span id="pdf-total-cuentas" class="font-bold">0</span></div>
+          <div class="flex justify-between"><span id="lbl-total-ventas">Total de ventas:</span><span id="pdf-total-ventas" class="font-bold">$0.00</span></div>
+          <div class="flex justify-between font-bold text-blue-800 border-t pt-1"><span id="lbl-total-ganancias">Ganancias:</span><span id="pdf-total-ganancias">$0.00</span></div>
+        </div>
+      </div>
+
+      <!-- HISTORIAL / BITÁCORA DE DÍAS GUARDADOS DE LA SEMANA -->
+      <div class="bg-white p-4 rounded-lg shadow space-y-3">
+        <h3 class="font-bold text-sm border-b pb-2 text-gray-800">📅 Días Registrados en la Semana</h3>
+        <div id="lista-dias-guardados" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
+      </div>
+    </section>
+
+  </main>
 
   <script>
+    // ServiceWorker
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open('app-v5').then(cache => cache.addAll(['./'])));
+        });
+        self.addEventListener('fetch', e => {
+          e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+        });
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
+    // ESTADO GENERAL
     let productos = JSON.parse(localStorage.getItem('pos_prods')) || [
       { id: 1, nombre: 'Roma', precio: 17, costo: 9 },
       { id: 2, nombre: 'Cloro', precio: 6, costo: 3.5 },
       { id: 3, nombre: 'Fabuloso', precio: 15, costo: 8 }
     ];
 
+    let promos = JSON.parse(localStorage.getItem('pos_promos')) || [];
+    let otros = JSON.parse(localStorage.getItem('pos_otros')) || [];
     let cuentas = JSON.parse(localStorage.getItem('pos_cuentas')) || [];
     let carrito = [];
 
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('txt-fecha-hoy').innerText = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-      renderProductosCaja();
-      renderInventario();
-      actualizarStats();
-    });
-
     function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      event.target.classList.add('active');
-      document.getElementById(`tab-${tab}`).classList.add('active');
+      ['ventas', 'inventario', 'promos', 'otros', 'reportes'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+      });
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
 
-      if(tab === 'reportes') renderHistorial();
+      if (tab === 'ventas') renderVentas();
+      if (tab === 'inventario') renderInventario();
+      if (tab === 'promos') renderPromos();
+      if (tab === 'otros') renderOtros();
+      if (tab === 'reportes') {
+        const hoyStr = new Date().toISOString().split('T')[0];
+        document.getElementById('fecha-reporte-diario').value = hoyStr;
+        actualizarVistaReporte();
+      }
     }
 
-    function renderProductosCaja() {
+    function renderVentas() {
       const pDinero = document.getElementById('prod-dinero');
       const pLitros = document.getElementById('prod-litros');
-      const gRapido = document.getElementById('grid-rapido');
-
-      pDinero.innerHTML = '';
-      pLitros.innerHTML = '';
-      gRapido.innerHTML = '';
+      const gP = document.getElementById('grid-productos');
+      
+      pDinero.innerHTML = '<option value="" selected disabled>-- Seleccionar Producto --</option>';
+      pLitros.innerHTML = '<option value="" selected disabled>-- Seleccionar Producto --</option>';
+      gP.innerHTML = '';
 
       productos.forEach(p => {
-        pDinero.innerHTML += `<option value="${p.id}">${p.nombre} ($${p.precio}/L)</option>`;
-        pLitros.innerHTML += `<option value="${p.id}">${p.nombre} ($${p.precio}/L)</option>`;
+        const option = `<option value="${p.id}">${p.nombre} ($${p.precio}/L)</option>`;
+        pDinero.innerHTML += option;
+        pLitros.innerHTML += option;
 
-        gRapido.innerHTML += `
-          <button class="quick-btn" onclick="agregarAlCarrito('${p.nombre}', ${p.precio}, ${p.costo}, '1 L', 1)">
-            <p>${p.nombre}</p>
-            <span>$${p.precio.toFixed(2)}/L</span>
+        gP.innerHTML += `
+          <button onclick="agregarAlCarrito('${p.nombre}', ${p.precio}, ${p.costo}, '1 L', 1, ${p.id})" class="p-2 border rounded bg-blue-50 hover:bg-blue-100 text-left">
+            <p class="font-bold text-xs">${p.nombre}</p>
+            <p class="text-xs text-blue-700 font-semibold">$${p.precio}/L</p>
           </button>
         `;
       });
+
+      const gPr = document.getElementById('grid-promos');
+      gPr.innerHTML = '';
+      promos.forEach(pr => {
+        gPr.innerHTML += `
+          <button onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio}, 0, '1 Combo', 0, null)" class="p-2 border rounded bg-amber-50 hover:bg-amber-100 text-left">
+            <p class="font-bold text-xs text-amber-900">${pr.nombre}</p>
+            <p class="text-[10px] text-amber-800 italic">${pr.desc || ''}</p>
+            <p class="text-xs text-amber-700 font-semibold mt-1">$${pr.precio}</p>
+          </button>
+        `;
+      });
+
+      const gOt = document.getElementById('grid-otros');
+      gOt.innerHTML = '';
+      otros.forEach(o => {
+        gOt.innerHTML += `
+          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio}, 0, '1 Pza', 0, null)" class="p-2 border rounded bg-gray-50 hover:bg-gray-100 text-left">
+            <p class="font-bold text-xs">${o.nombre}</p>
+            <p class="text-xs text-gray-600">$${o.precio}</p>
+          </button>
+        `;
+      });
+
+      renderCarrito();
     }
 
-    function agregarPorDinero() {
+    function agregarPorDineroRedondeado() {
       const monto = parseFloat(document.getElementById('monto-dinero').value);
-      const id = parseInt(document.getElementById('prod-dinero').value);
-      const prod = productos.find(p => p.id === id);
+      const valSelect = document.getElementById('prod-dinero').value;
 
-      if(!monto || monto <= 0 || !prod) return alert("Ingresa un monto válido.");
+      if (!valSelect) return alert("Por favor selecciona un producto de la lista.");
 
-      const litrosCalculados = (monto / prod.precio).toFixed(2);
-      agregarAlCarrito(prod.nombre, monto, prod.costo * litrosCalculados, `${litrosCalculados} L`, litrosCalculados);
+      const idP = parseInt(valSelect);
+      const prod = productos.find(p => p.id === idP);
+
+      if (!monto || monto <= 0 || !prod) return alert("Por favor ingresa un monto válido.");
+
+      const litrosExactos = monto / prod.precio;
+      const litrosRedondeados = Math.ceil(litrosExactos);
+      const cobroFinal = litrosRedondeados * prod.precio;
+      const costoTotal = prod.costo * litrosRedondeados;
+
+      agregarAlCarrito(prod.nombre, cobroFinal, costoTotal, `${litrosRedondeados} L`, litrosRedondeados, prod.id);
       document.getElementById('monto-dinero').value = '';
+      document.getElementById('prod-dinero').value = '';
     }
 
-    function agregarPorLitros() {
+    function agregarPorLitrosDirectos() {
       const litros = parseFloat(document.getElementById('cant-litros').value);
-      const id = parseInt(document.getElementById('prod-litros').value);
-      const prod = productos.find(p => p.id === id);
+      const valSelect = document.getElementById('prod-litros').value;
 
-      if(!litros || litros <= 0 || !prod) return alert("Ingresa una cantidad de litros válida.");
+      if (!valSelect) return alert("Por favor selecciona un producto de la lista.");
+
+      const idP = parseInt(valSelect);
+      const prod = productos.find(p => p.id === idP);
+
+      if (!litros || litros <= 0 || !prod) return alert("Por favor ingresa una cantidad de litros válida.");
 
       const subtotal = litros * prod.precio;
-      agregarAlCarrito(prod.nombre, subtotal, prod.costo * litros, `${litros} L`, litros);
+      const costoTotal = prod.costo * litros;
+
+      agregarAlCarrito(prod.nombre, subtotal, costoTotal, `${litros} L`, litros, prod.id);
       document.getElementById('cant-litros').value = '';
+      document.getElementById('prod-litros').value = '';
     }
 
-    function agregarAlCarrito(nombre, subtotal, costo, cantTxt, litros) {
-      const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-      carrito.push({ hora, producto: nombre, subtotal, ganancia: (subtotal - costo), cantidad: cantTxt, litros });
+    function agregarAlCarrito(nombre, subtotal, costo, cantTxt, litrosNum, prodId) {
+      const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: (subtotal - costo), prodId });
       renderCarrito();
     }
 
     function renderCarrito() {
-      const cont = document.getElementById('cart-container');
+      const cont = document.getElementById('carrito-items');
+      if (!cont) return;
       cont.innerHTML = '';
-      let total = 0;
+      
+      if (carrito.length === 0) {
+        cont.innerHTML = '<p class="text-xs text-gray-400 italic">No hay productos agregados.</p>';
+        document.getElementById('cart-total').innerText = `$0.00`;
+        document.getElementById('cart-cambio').innerText = `$0.00`;
+        return;
+      }
 
+      let total = 0;
       carrito.forEach((item, idx) => {
         total += item.subtotal;
         cont.innerHTML += `
-          <div class="cart-item">
-            <div class="cart-item-info">
-              <h4>${item.producto}</h4>
-              <p>${item.cantidad} - $${item.subtotal.toFixed(2)}</p>
+          <div class="flex justify-between items-center text-xs border-b pb-1">
+            <div>
+              <p class="font-bold text-gray-800">${item.producto} <span class="text-[10px] text-gray-400">(${item.hora})</span></p>
+              <p class="text-gray-500">${item.cantidad} - <span class="font-semibold text-blue-700">$${item.subtotal.toFixed(2)}</span></p>
             </div>
-            <button class="btn btn-secondary" onclick="carrito.splice(${idx},1); renderCarrito();">✕</button>
+            <button onclick="carrito.splice(${idx},1); renderCarrito();" class="text-red-600 font-bold px-1 hover:bg-red-50 rounded">✕</button>
           </div>
         `;
       });
-
       document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
       calcularCambio();
     }
 
     function calcularCambio() {
       const total = carrito.reduce((s, i) => s + i.subtotal, 0);
-      const pago = parseFloat(document.getElementById('input-pago').value) || 0;
-      const box = document.getElementById('box-cambio');
-      const lbl = document.getElementById('lbl-cambio');
-      const txt = document.getElementById('txt-cambio');
-
-      if (pago < total) {
-        box.className = "cambio-box rojo";
-        lbl.style.display = "none";
-        txt.innerText = `Faltan $${(total - pago).toFixed(2)}`;
-      } else {
-        box.className = "cambio-box verde";
-        lbl.style.display = "block";
-        lbl.innerText = "Cambio";
-        txt.innerText = `$${(pago - total).toFixed(2)}`;
-      }
+      const pago = parseFloat(document.getElementById('pago-cliente').value) || 0;
+      document.getElementById('cart-cambio').innerText = `$${(pago > total ? pago - total : 0).toFixed(2)}`;
     }
 
     function cobrarVenta() {
-      if(carrito.length === 0) return alert("El carrito está vacío.");
-      const total = carrito.reduce((s, i) => s + i.subtotal, 0);
-      const pago = parseFloat(document.getElementById('input-pago').value) || 0;
+      if (carrito.length === 0) return alert("La cuenta está vacía.");
 
-      if(pago < total) return alert("El monto ingresado no cubre el total.");
+      const fechaHoy = new Date().toISOString().split('T')[0];
+      cuentas.push({ fecha: fechaHoy, items: [...carrito] });
 
-      const hoyStr = new Date().toISOString().split('T')[0];
-      cuentas.push({ fecha: hoyStr, items: [...carrito], total });
       localStorage.setItem('pos_cuentas', JSON.stringify(cuentas));
 
-      vaciarCarrito();
-      actualizarStats();
-      alert("Venta registrada con éxito.");
-    }
-
-    function vaciarCarrito() {
       carrito = [];
-      document.getElementById('input-pago').value = '';
+      document.getElementById('pago-cliente').value = '';
       renderCarrito();
+      alert("Venta registrada correctamente.");
     }
 
-    function actualizarStats() {
-      const hoyStr = new Date().toISOString().split('T')[0];
-      const cuentasHoy = cuentas.filter(c => c.fecha === hoyStr);
-      
-      let totalVentas = 0;
-      let totalGanancias = 0;
+    // INVENTARIO
+    function guardarProducto(e) {
+      e.preventDefault();
+      const id = document.getElementById('prod-id').value;
+      const nombre = document.getElementById('prod-nombre').value;
+      const precio = parseFloat(document.getElementById('prod-precio').value);
+      const costo = parseFloat(document.getElementById('prod-costo').value);
 
-      cuentasHoy.forEach(c => {
-        c.items.forEach(i => {
-          totalVentas += i.subtotal;
-          totalGanancias += i.ganancia;
-        });
-      });
+      if (id) {
+        const index = productos.findIndex(p => p.id == id);
+        if (index !== -1) productos[index] = { ...productos[index], nombre, precio, costo };
+      } else {
+        productos.push({ id: Date.now(), nombre, precio, costo });
+      }
 
-      document.getElementById('txt-num-cuentas').innerText = `Cuentas (${cuentasHoy.length})`;
-      document.getElementById('txt-total-ventas').innerText = `$${totalVentas.toFixed(2)}`;
-      document.getElementById('txt-total-ganancias').innerText = `$${totalGanancias.toFixed(2)}`;
+      localStorage.setItem('pos_prods', JSON.stringify(productos));
+      cancelarEdicionProd();
+      renderInventario();
+    }
+
+    function editarProducto(id) {
+      const p = productos.find(x => x.id === id);
+      if (!p) return;
+
+      document.getElementById('prod-id').value = p.id;
+      document.getElementById('prod-nombre').value = p.nombre;
+      document.getElementById('prod-precio').value = p.precio;
+      document.getElementById('prod-costo').value = p.costo;
+
+      document.getElementById('inv-form-title').innerText = "Editar Producto Líquido";
+      document.getElementById('btn-save-prod').innerText = "Actualizar Producto";
+      document.getElementById('btn-cancel-prod').classList.remove('hidden');
+    }
+
+    function cancelarEdicionProd() {
+      document.getElementById('prod-id').value = '';
+      document.getElementById('prod-nombre').value = '';
+      document.getElementById('prod-precio').value = '';
+      document.getElementById('prod-costo').value = '';
+
+      document.getElementById('inv-form-title').innerText = "Agregar / Editar Producto Líquido";
+      document.getElementById('btn-save-prod').innerText = "Guardar Producto";
+      document.getElementById('btn-cancel-prod').classList.add('hidden');
     }
 
     function renderInventario() {
-      const list = document.getElementById('lista-inventario');
-      list.innerHTML = '';
+      const tb = document.getElementById('tabla-productos');
+      tb.innerHTML = '';
       productos.forEach(p => {
-        list.innerHTML += `
-          <div class="cart-item">
-            <div class="cart-item-info">
-              <h4>${p.nombre}</h4>
-              <p>Precio Venta: $${p.precio}/L | Costo: $${p.costo}/L</p>
+        tb.innerHTML += `
+          <tr class="border-b">
+            <td class="p-2 font-bold">${p.nombre}</td>
+            <td class="p-2">$${p.precio}/L</td>
+            <td class="p-2">$${p.costo}/L</td>
+            <td class="p-2 space-x-1">
+              <button onclick="editarProducto(${p.id})" class="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">✏️ Editar</button>
+              <button onclick="eliminarProd(${p.id})" class="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">✕ Eliminar</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function eliminarProd(id) {
+      if (confirm("¿Estás seguro de eliminar este producto?")) {
+        productos = productos.filter(p => p.id !== id);
+        localStorage.setItem('pos_prods', JSON.stringify(productos));
+        renderInventario();
+      }
+    }
+
+    // COMBOS / PROMOS (SIN CAMPO COSTO REAL)
+    function guardarPromo(e) {
+      e.preventDefault();
+      const id = document.getElementById('promo-id').value;
+      const nombre = document.getElementById('promo-nombre').value;
+      const desc = document.getElementById('promo-desc').value;
+      const precio = parseFloat(document.getElementById('promo-precio').value);
+
+      if (id) {
+        const idx = promos.findIndex(p => p.id == id);
+        if (idx !== -1) promos[idx] = { ...promos[idx], nombre, desc, precio };
+      } else {
+        promos.push({ id: Date.now(), nombre, desc, precio });
+      }
+
+      localStorage.setItem('pos_promos', JSON.stringify(promos));
+      cancelarEdicionPromo();
+      renderPromos();
+    }
+
+    function editarPromo(id) {
+      const p = promos.find(x => x.id === id);
+      if (!p) return;
+
+      document.getElementById('promo-id').value = p.id;
+      document.getElementById('promo-nombre').value = p.nombre;
+      document.getElementById('promo-desc').value = p.desc;
+      document.getElementById('promo-precio').value = p.precio;
+
+      document.getElementById('promo-form-title').innerText = "Editar Combo o Promoción";
+      document.getElementById('btn-save-promo').innerText = "Actualizar Combo";
+      document.getElementById('btn-cancel-promo').classList.remove('hidden');
+    }
+
+    function cancelarEdicionPromo() {
+      document.getElementById('promo-id').value = '';
+      document.getElementById('promo-nombre').value = '';
+      document.getElementById('promo-desc').value = '';
+      document.getElementById('promo-precio').value = '';
+
+      document.getElementById('promo-form-title').innerText = "Crear / Editar Combo o Promoción";
+      document.getElementById('btn-save-promo').innerText = "Guardar Combo / Promoción";
+      document.getElementById('btn-cancel-promo').classList.add('hidden');
+    }
+
+    function renderPromos() {
+      const c = document.getElementById('lista-promos-mng');
+      c.innerHTML = '';
+      promos.forEach(p => {
+        c.innerHTML += `
+          <div class="p-2 border rounded flex justify-between items-center bg-amber-50">
+            <div>
+              <p class="font-bold text-amber-900">${p.nombre}</p>
+              <p class="text-gray-600 text-[11px]">${p.desc}</p>
+              <p class="text-xs text-amber-700 font-semibold">$${p.precio}</p>
+            </div>
+            <div class="space-x-1">
+              <button onclick="editarPromo(${p.id})" class="text-blue-600 font-bold bg-blue-100 px-2 py-1 rounded">✏️ Editar</button>
+              <button onclick="eliminarPromo(${p.id})" class="text-red-600 font-bold bg-red-100 px-2 py-1 rounded">✕ Eliminar</button>
             </div>
           </div>
         `;
       });
     }
 
-    function renderHistorial() {
-      const list = document.getElementById('lista-historial-dia');
-      const hoyStr = new Date().toISOString().split('T')[0];
-      const cuentasHoy = cuentas.filter(c => c.fecha === hoyStr);
-      list.innerHTML = '';
+    function eliminarPromo(id) {
+      if (confirm("¿Eliminar esta promoción?")) {
+        promos = promos.filter(p => p.id !== id);
+        localStorage.setItem('pos_promos', JSON.stringify(promos));
+        renderPromos();
+      }
+    }
 
-      cuentasHoy.forEach(c => {
-        c.items.forEach(i => {
-          list.innerHTML += `
-            <div class="cart-item">
-              <div class="cart-item-info">
-                <h4>${i.producto} (${i.hora})</h4>
-                <p>${i.cantidad} — $${i.subtotal.toFixed(2)}</p>
-              </div>
-            </div>
-          `;
-        });
+    // OTROS PRODUCTOS
+    function guardarOtro(e) {
+      e.preventDefault();
+      const id = document.getElementById('otro-id').value;
+      const nombre = document.getElementById('otro-nombre').value;
+      const precio = parseFloat(document.getElementById('otro-precio').value);
+
+      if (id) {
+        const idx = otros.findIndex(o => o.id == id);
+        if (idx !== -1) otros[idx] = { ...otros[idx], nombre, precio };
+      } else {
+        otros.push({ id: Date.now(), nombre, precio });
+      }
+
+      localStorage.setItem('pos_otros', JSON.stringify(otros));
+      cancelarEdicionOtro();
+      renderOtros();
+    }
+
+    function editarOtro(id) {
+      const o = otros.find(x => x.id === id);
+      if (!o) return;
+
+      document.getElementById('otro-id').value = o.id;
+      document.getElementById('otro-nombre').value = o.nombre;
+      document.getElementById('otro-precio').value = o.precio;
+
+      document.getElementById('otro-form-title').innerText = "Editar Otro Producto";
+      document.getElementById('btn-save-otro').innerText = "Actualizar Producto";
+      document.getElementById('btn-cancel-otro').classList.remove('hidden');
+    }
+
+    function cancelarEdicionOtro() {
+      document.getElementById('otro-id').value = '';
+      document.getElementById('otro-nombre').value = '';
+      document.getElementById('otro-precio').value = '';
+
+      document.getElementById('otro-form-title').innerText = "Agregar / Editar Otro Producto";
+      document.getElementById('btn-save-otro').innerText = "Guardar Producto";
+      document.getElementById('btn-cancel-otro').classList.add('hidden');
+    }
+
+    function renderOtros() {
+      const tb = document.getElementById('tabla-otros');
+      if (!tb) return;
+      tb.innerHTML = '';
+      otros.forEach(o => {
+        tb.innerHTML += `
+          <tr class="border-b">
+            <td class="p-2 font-bold">${o.nombre}</td>
+            <td class="p-2">$${o.precio}</td>
+            <td class="p-2 space-x-1">
+              <button onclick="editarOtro(${o.id})" class="text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded">✏️ Editar</button>
+              <button onclick="eliminarOtro(${o.id})" class="text-red-600 font-bold bg-red-50 px-2 py-1 rounded">✕ Eliminar</button>
+            </td>
+          </tr>
+        `;
       });
     }
 
-    function descargarPDF() {
-      const element = document.getElementById('pdf-container');
-      element.style.display = 'block';
+    function eliminarOtro(id) {
+      if (confirm("¿Eliminar este producto?")) {
+        otros = otros.filter(o => o.id !== id);
+        localStorage.setItem('pos_otros', JSON.stringify(otros));
+        renderOtros();
+      }
+    }
 
-      const hoyStr = new Date().toISOString().split('T')[0];
-      document.getElementById('pdf-fecha-str').innerText = `Fecha: ${hoyStr}`;
-      
-      const tbody = document.getElementById('pdf-filas');
-      tbody.innerHTML = '';
-      
-      const cuentasHoy = cuentas.filter(c => c.fecha === hoyStr);
-      let total = 0;
+    // REPORTES Y PDF
+    function actualizarVistaReporte() {
+      const modo = document.getElementById('tipo-reporte').value;
+      const wrapFecha = document.getElementById('wrapper-fecha-diario');
+      if (modo === 'diario') {
+        wrapFecha.classList.remove('hidden');
+      } else {
+        wrapFecha.classList.add('hidden');
+      }
+      renderReportePDF();
+      renderDiasGuardados();
+    }
 
-      cuentasHoy.forEach(c => {
-        c.items.forEach(i => {
-          total += i.subtotal;
-          tbody.innerHTML += `
-            <tr>
-              <td>${i.hora}</td>
-              <td>${i.producto}</td>
-              <td>${i.cantidad}</td>
-              <td>$${i.subtotal.toFixed(2)}</td>
+    function renderReportePDF() {
+      const modo = document.getElementById('tipo-reporte').value;
+      const tVentas = document.getElementById('pdf-filas-ventas');
+      const tLitros = document.getElementById('pdf-filas-litros');
+      const tFoot = document.getElementById('pdf-foot-ventas');
+
+      tVentas.innerHTML = '';
+      tLitros.innerHTML = '';
+      tFoot.innerHTML = '';
+
+      let cuentasFiltradas = [];
+
+      if (modo === 'diario') {
+        const fechaSelec = document.getElementById('fecha-reporte-diario').value;
+        document.getElementById('pdf-titulo-principal').innerText = 'Reporte de Ventas Diario';
+        document.getElementById('pdf-subtitulo-fecha').innerText = `Fecha: ${fechaSelec || 'No seleccionada'}`;
+        document.getElementById('th-col-1').innerText = 'HORA';
+        document.getElementById('titulo-resumen-litros').innerText = 'Resumen de Litros Vendidos al Día';
+        
+        cuentasFiltradas = cuentas.filter(c => c.fecha === fechaSelec);
+      } else {
+        document.getElementById('pdf-titulo-principal').innerText = 'Reporte Cierre Semanal';
+        document.getElementById('pdf-subtitulo-fecha').innerText = 'Acumulado de todas las ventas registradas';
+        document.getElementById('th-col-1').innerText = 'FECHA';
+        document.getElementById('titulo-resumen-litros').innerText = 'Resumen Acumulado de Litros Vendidos';
+        
+        cuentasFiltradas = cuentas;
+      }
+
+      let grandTotalVentas = 0;
+      let grandTotalGanancias = 0;
+      let acumuladoLitros = {};
+
+      productos.forEach(p => acumuladoLitros[p.nombre] = 0);
+
+      cuentasFiltradas.forEach(c => {
+        c.items.forEach(item => {
+          grandTotalVentas += item.subtotal;
+          grandTotalGanancias += item.ganancia;
+
+          if (item.litros && item.producto) {
+            if (acumuladoLitros[item.producto] !== undefined) {
+              acumuladoLitros[item.producto] += item.litros;
+            } else {
+              acumuladoLitros[item.producto] = item.litros;
+            }
+          }
+
+          const col1Val = modo === 'diario' ? item.hora : c.fecha;
+          tVentas.innerHTML += `
+            <tr class="border-b">
+              <td>${col1Val}</td>
+              <td class="font-bold">${item.producto}</td>
+              <td>${item.cantidad}</td>
+              <td>$${item.subtotal.toFixed(2)}</td>
+              <td class="text-emerald-700 font-semibold">$${item.ganancia.toFixed(2)}</td>
             </tr>
           `;
         });
       });
 
-      document.getElementById('pdf-total-str').innerText = `Total: $${total.toFixed(2)}`;
+      tFoot.innerHTML = `
+        <tr>
+          <td colspan="3" class="p-2 text-right">TOTALES:</td>
+          <td class="p-2 text-blue-800">$${grandTotalVentas.toFixed(2)}</td>
+          <td class="p-2 text-emerald-700">$${grandTotalGanancias.toFixed(2)}</td>
+        </tr>
+      `;
 
-      html2pdf().set({ margin: 0.5, filename: `Ventas_${hoyStr}.pdf`, html2canvas: { scale: 2 } })
-        .from(element)
-        .save()
-        .then(() => { element.style.display = 'none'; });
+      Object.keys(acumuladoLitros).forEach(pNombre => {
+        tLitros.innerHTML += `
+          <tr class="border-b">
+            <td class="font-bold">${pNombre}</td>
+            <td class="font-semibold text-blue-900">${acumuladoLitros[pNombre]} L</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('pdf-total-cuentas').innerText = cuentasFiltradas.length;
+      document.getElementById('pdf-total-ventas').innerText = `$${grandTotalVentas.toFixed(2)}`;
+      document.getElementById('pdf-total-ganancias').innerText = `$${grandTotalGanancias.toFixed(2)}`;
     }
+
+    function renderDiasGuardados() {
+      const cont = document.getElementById('lista-dias-guardados');
+      cont.innerHTML = '';
+
+      const diasUnicos = [...new Set(cuentas.map(c => c.fecha))].sort().reverse();
+
+      if (diasUnicos.length === 0) {
+        cont.innerHTML = '<p class="text-xs text-gray-400 italic col-span-full">No hay días registrados.</p>';
+        return;
+      }
+
+      diasUnicos.forEach(f => {
+        const numCuentas = cuentas.filter(c => c.fecha === f).length;
+        cont.innerHTML += `
+          <button onclick="seleccionarDiaHistorial('${f}')" class="p-2 border rounded bg-gray-50 hover:bg-blue-50 text-left flex justify-between items-center">
+            <span class="font-bold text-gray-700">${f}</span>
+            <span class="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">${numCuentas} vent.</span>
+          </button>
+        `;
+      });
+    }
+
+    function seleccionarDiaHistorial(f) {
+      document.getElementById('tipo-reporte').value = 'diario';
+      document.getElementById('fecha-reporte-diario').value = f;
+      actualizarVistaReporte();
+    }
+
+    function descargarPDFActual() {
+      const element = document.getElementById('pdf-container');
+      const modo = document.getElementById('tipo-reporte').value;
+      const fecha = document.getElementById('fecha-reporte-diario').value;
+      const filename = modo === 'diario' ? `Reporte_Ventas_${fecha}.pdf` : `Reporte_Semanal.pdf`;
+
+      const opt = {
+        margin:       0.5,
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // Inicialización al cargar
+    renderVentas();
   </script>
 </body>
 </html>
