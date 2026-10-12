@@ -281,6 +281,9 @@
     .pdf-summary-row { display: flex; justify-content: space-between; font-size: 13px; color: #3a3a3c; }
     .pdf-summary-row.total-bold { font-size: 15px; font-weight: 800; color: #000000; border-top: 1px solid #e5e5ea; padding-top: 8px; }
 
+    .pdf-group-header { font-size: 13px; font-weight: 800; color: #000000; background: #e9f7f5; padding: 7px 10px; border-radius: 8px; margin-top: 16px; margin-bottom: 2px; border-left: 4px solid #0d9488; text-transform: capitalize; }
+    .pdf-group-header:first-of-type { margin-top: 8px; }
+
     /* MODAL */
     .modal-overlay {
       position: fixed;
@@ -334,6 +337,7 @@
       <button class="tab-btn" onclick="switchTab('inventario')">📦 Inventario</button>
       <button class="tab-btn" onclick="switchTab('promos')">🎁 Promos</button>
       <button class="tab-btn" onclick="switchTab('otros')">🛍️ Otros</button>
+      <button class="tab-btn" onclick="switchTab('casa')">🧹 Casa</button>
       <button class="tab-btn" onclick="switchTab('reportes')">📊 Reportes</button>
     </div>
 
@@ -430,6 +434,19 @@
         </div>
       </div>
 
+      <!-- PRODUCTOS DEL HOGAR: buscador + lista completa opcional (no aparecen como botones de toque
+           rápido para no saturar la pantalla; se administran en la pestaña "Casa") -->
+      <div class="card">
+        <div class="card-title">🧹 Productos del hogar</div>
+        <div class="input-row">
+          <div class="form-group" style="flex: 2;">
+            <input type="text" id="buscar-casa" placeholder="🔍 Buscar producto (ej. escoba, cubeta...)" oninput="renderProductosCasaVenta()">
+          </div>
+          <button type="button" class="btn btn-secondary" id="btn-ver-todos-casa" onclick="toggleVerTodosCasa()">Ver todos ▾</button>
+        </div>
+        <div id="lista-casa-venta" class="cart-list" style="padding-top: 4px;"></div>
+      </div>
+
       <!-- HISTORIAL DE HOY -->
       <div class="card">
         <div class="card-title">
@@ -519,9 +536,15 @@
             <label>Productos que incluye:</label>
             <input type="text" id="promo-desc" placeholder="ej. 1L Cloro + 1L Fabuloso" required>
           </div>
-          <div class="form-group">
-            <label>Precio de Venta Combo ($):</label>
-            <input type="number" step="1" id="promo-precio" placeholder="0" required>
+          <div class="input-row">
+            <div class="form-group">
+              <label>Precio de Venta Combo ($):</label>
+              <input type="number" step="1" id="promo-precio" placeholder="0" required>
+            </div>
+            <div class="form-group">
+              <label>Ganancia por combo ($):</label>
+              <input type="number" step="1" id="promo-ganancia" placeholder="0">
+            </div>
           </div>
           <div style="display: flex; gap: 6px; margin-top: 4px;">
             <button type="submit" id="btn-save-promo" class="btn" style="flex: 1;">Guardar Combo</button>
@@ -546,9 +569,15 @@
             <label>Nombre del Producto:</label>
             <input type="text" id="otro-nombre" placeholder="ej. Fibra verde, Jalador" required>
           </div>
-          <div class="form-group">
-            <label>Precio de Venta ($):</label>
-            <input type="number" step="1" id="otro-precio" placeholder="0" required>
+          <div class="input-row">
+            <div class="form-group">
+              <label>Precio de Venta ($):</label>
+              <input type="number" step="1" id="otro-precio" placeholder="0" required>
+            </div>
+            <div class="form-group">
+              <label>Ganancia por venta ($):</label>
+              <input type="number" step="1" id="otro-ganancia" placeholder="0">
+            </div>
           </div>
           <div style="display: flex; gap: 6px; margin-top: 4px;">
             <button type="submit" id="btn-save-otro" class="btn" style="flex: 1;">Guardar Producto</button>
@@ -564,10 +593,59 @@
             <tr>
               <th>Producto</th>
               <th>Precio</th>
+              <th>Ganancia</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-otros"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PESTAÑA: PRODUCTOS DEL HOGAR (escobas, cubetas, químicos, etc. por categoría) -->
+    <div id="tab-casa" class="tab-content">
+      <div class="card">
+        <div class="card-title" id="casa-form-title">Agregar / Editar Producto del Hogar</div>
+        <form onsubmit="guardarProductoCasa(event)" style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="hidden" id="casa-id">
+          <div class="form-group">
+            <label>Nombre del Producto:</label>
+            <input type="text" id="casa-nombre" placeholder="ej. Escoba de plástico" required>
+          </div>
+          <div class="form-group">
+            <label>Categoría:</label>
+            <select id="casa-categoria" required></select>
+          </div>
+          <div class="input-row">
+            <div class="form-group">
+              <label>Precio de Venta ($):</label>
+              <input type="number" step="1" id="casa-precio" placeholder="0" required>
+            </div>
+            <div class="form-group">
+              <label>Ganancia por venta ($):</label>
+              <input type="number" step="1" id="casa-ganancia" placeholder="0">
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <button type="submit" id="btn-save-casa" class="btn" style="flex: 1;">Guardar Producto</button>
+            <button type="button" id="btn-cancel-casa" onclick="cancelarEdicionProductoCasa()" class="btn btn-secondary" style="display: none;">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card" style="overflow-x: auto;">
+        <div class="card-title">Lista de Productos del Hogar</div>
+        <table class="dark-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Ganancia</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-casa"></tbody>
         </table>
       </div>
     </div>
@@ -649,21 +727,37 @@
       { id: 106, nombre: 'Bolsa Dove', precio: 70 }
     ];
 
+    // Categorías fijas para "Productos del hogar" (escobas, cubetas, químicos, etc.)
+    const CATEGORIAS_CASA = [
+      'Escobas y Jaladores',
+      'Recogedores y Limpieza de Pisos',
+      'Cubetas, Cestas y Botes',
+      'Fibras, Esponjas y Cepillos',
+      'Jergas, Trapos y Microfibras',
+      'Químicos y Aromatizantes',
+      'Accesorios de Hogar y Jardín'
+    ];
+
     let productos = JSON.parse(localStorage.getItem('pos_prods')) || productosBase;
     let promos = JSON.parse(localStorage.getItem('pos_promos')) || [];
     let otros = JSON.parse(localStorage.getItem('pos_otros')) || otrosBase;
+    let productosCasa = JSON.parse(localStorage.getItem('pos_productos_casa')) || [];
 
     let cuentas = JSON.parse(localStorage.getItem('pos_cuentas')) || [];
     let archivoSemana = JSON.parse(localStorage.getItem('pos_archivo_semana')) || [];
     let carrito = [];
+    let casaExpandido = false; // si la lista completa de "Productos del hogar" está desplegada en Caja
 
     document.addEventListener('DOMContentLoaded', () => {
       verificarReinicioDiario();
       renderFecha();
+      poblarSelectCategoriasCasa();
       renderVentas();
       renderInventario();
       renderPromos();
       renderOtros();
+      renderCasaAdmin();
+      renderProductosCasaVenta();
       renderHistorialHoy();
       renderDiasAnteriores();
       actualizarStats();
@@ -718,13 +812,20 @@
       return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
 
+    // Versión corta tipo "lun 06 oct", usada dentro de filas de tabla cuando un bloque del
+    // reporte abarca varios días (reporte mensual agrupado por semana).
+    function obtenerFechaCortaLocal(strFecha) {
+      const d = parsearFechaLocal(strFecha);
+      return d.toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' });
+    }
+
     function renderFecha() {
       const hoyStr = fechaLocalISO();
       document.getElementById('txt-fecha-hoy').innerText = obtenerFechaTextoLocal(hoyStr);
     }
 
     function switchTab(tab) {
-      ['ventas', 'inventario', 'promos', 'otros', 'reportes'].forEach(t => {
+      ['ventas', 'inventario', 'promos', 'otros', 'casa', 'reportes'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.remove('active');
       });
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -736,6 +837,7 @@
       if (tab === 'inventario') renderInventario();
       if (tab === 'promos') renderPromos();
       if (tab === 'otros') renderOtros();
+      if (tab === 'casa') renderCasaAdmin();
       if (tab === 'reportes') {
         const hoyStr = fechaLocalISO();
         document.getElementById('fecha-reporte-diario').value = hoyStr;
@@ -811,7 +913,7 @@
       } else {
         promos.forEach(pr => {
           gPr.innerHTML += `
-            <button onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio || 0}, 0, '1 Combo', 0, null)" class="quick-btn">
+            <button onclick="agregarAlCarrito('${pr.nombre}', ${pr.precio || 0}, ${pr.ganancia || 0}, '1 Combo', 0, null)" class="quick-btn">
               <p style="color: #f59e0b;">${pr.nombre}</p>
               <span class="desc">${pr.desc || ''}</span>
               <span>$${pr.precio || 0}</span>
@@ -824,7 +926,7 @@
       gOt.innerHTML = '';
       otros.forEach(o => {
         gOt.innerHTML += `
-          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio || 0}, 0, '1 Pza', 0, null)" class="quick-btn">
+          <button onclick="agregarAlCarrito('${o.nombre}', ${o.precio || 0}, ${o.ganancia || 0}, '1 Pza', 0, null)" class="quick-btn">
             <p>${o.nombre}</p>
             <span>$${o.precio || 0}</span>
           </button>
@@ -1235,7 +1337,7 @@
 
     // RESPALDO DE DATOS
     function exportarRespaldo() {
-      const respaldo = { productos, promos, otros, cuentas, archivoSemana, exportadoEl: new Date().toISOString() };
+      const respaldo = { productos, promos, otros, productosCasa, cuentas, archivoSemana, exportadoEl: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(respaldo, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1257,12 +1359,14 @@
           if (Array.isArray(data.productos)) productos = data.productos;
           if (Array.isArray(data.promos)) promos = data.promos;
           if (Array.isArray(data.otros)) otros = data.otros;
+          if (Array.isArray(data.productosCasa)) productosCasa = data.productosCasa;
           if (Array.isArray(data.cuentas)) cuentas = data.cuentas;
           if (Array.isArray(data.archivoSemana)) archivoSemana = data.archivoSemana;
 
           localStorage.setItem('pos_prods', JSON.stringify(productos));
           localStorage.setItem('pos_promos', JSON.stringify(promos));
           localStorage.setItem('pos_otros', JSON.stringify(otros));
+          localStorage.setItem('pos_productos_casa', JSON.stringify(productosCasa));
           localStorage.setItem('pos_cuentas', JSON.stringify(cuentas));
           localStorage.setItem('pos_archivo_semana', JSON.stringify(archivoSemana));
 
@@ -1270,6 +1374,8 @@
           renderInventario();
           renderPromos();
           renderOtros();
+          renderCasaAdmin();
+          renderProductosCasaVenta();
           renderHistorialHoy();
           renderDiasAnteriores();
           actualizarStats();
@@ -1289,12 +1395,15 @@
       const desc = document.getElementById('promo-desc').value;
       const precioVal = document.getElementById('promo-precio').value;
       const precio = precioVal !== '' ? Math.round(parseFloat(precioVal)) : '';
+      // La ganancia es opcional: si se deja en blanco, vale 0 (válido, no bloquea nada).
+      const gananciaVal = document.getElementById('promo-ganancia').value;
+      const ganancia = gananciaVal !== '' ? Math.round(parseFloat(gananciaVal)) : 0;
 
       if (id) {
         const idx = promos.findIndex(p => p.id == id);
-        if (idx !== -1) promos[idx] = { ...promos[idx], nombre, desc, precio };
+        if (idx !== -1) promos[idx] = { ...promos[idx], nombre, desc, precio, ganancia };
       } else {
-        promos.push({ id: Date.now(), nombre, desc, precio });
+        promos.push({ id: Date.now(), nombre, desc, precio, ganancia });
       }
 
       localStorage.setItem('pos_promos', JSON.stringify(promos));
@@ -1310,6 +1419,7 @@
       document.getElementById('promo-nombre').value = p.nombre;
       document.getElementById('promo-desc').value = p.desc;
       document.getElementById('promo-precio').value = p.precio !== undefined ? p.precio : '';
+      document.getElementById('promo-ganancia').value = (p.ganancia !== undefined && p.ganancia !== null) ? p.ganancia : 0;
       document.getElementById('promo-form-title').innerText = "Editar Combo";
       document.getElementById('btn-save-promo').innerText = "Actualizar Combo";
       document.getElementById('btn-cancel-promo').style.display = 'block';
@@ -1320,6 +1430,7 @@
       document.getElementById('promo-nombre').value = '';
       document.getElementById('promo-desc').value = '';
       document.getElementById('promo-precio').value = '';
+      document.getElementById('promo-ganancia').value = '';
       document.getElementById('promo-form-title').innerText = "Crear / Editar Combo o Promoción";
       document.getElementById('btn-save-promo').innerText = "Guardar Combo";
       document.getElementById('btn-cancel-promo').style.display = 'none';
@@ -1333,7 +1444,7 @@
           <div class="cart-item">
             <div class="cart-item-info">
               <h4 style="color:#f59e0b;">${p.nombre}</h4>
-              <p>${p.desc} — <b>$${p.precio !== '' ? p.precio : 0}</b></p>
+              <p>${p.desc} — <b>$${p.precio !== '' ? p.precio : 0}</b> · Ganancia: $${p.ganancia || 0}</p>
             </div>
             <div>
               <button onclick="editarPromo(${p.id})" class="btn-icon" title="Editar">✏️</button>
@@ -1358,12 +1469,15 @@
       const nombre = document.getElementById('otro-nombre').value;
       const precioVal = document.getElementById('otro-precio').value;
       const precio = precioVal !== '' ? Math.round(parseFloat(precioVal)) : '';
+      // La ganancia es opcional: si se deja en blanco, vale 0 (válido, no bloquea nada).
+      const gananciaVal = document.getElementById('otro-ganancia').value;
+      const ganancia = gananciaVal !== '' ? Math.round(parseFloat(gananciaVal)) : 0;
 
       if (id) {
         const idx = otros.findIndex(o => o.id == id);
-        if (idx !== -1) otros[idx] = { ...otros[idx], nombre, precio };
+        if (idx !== -1) otros[idx] = { ...otros[idx], nombre, precio, ganancia };
       } else {
-        otros.push({ id: Date.now(), nombre, precio });
+        otros.push({ id: Date.now(), nombre, precio, ganancia });
       }
 
       localStorage.setItem('pos_otros', JSON.stringify(otros));
@@ -1378,6 +1492,7 @@
       document.getElementById('otro-id').value = o.id;
       document.getElementById('otro-nombre').value = o.nombre;
       document.getElementById('otro-precio').value = o.precio !== undefined ? o.precio : '';
+      document.getElementById('otro-ganancia').value = (o.ganancia !== undefined && o.ganancia !== null) ? o.ganancia : 0;
       document.getElementById('otro-form-title').innerText = "Editar Otro Producto";
       document.getElementById('btn-save-otro').innerText = "Actualizar Producto";
       document.getElementById('btn-cancel-otro').style.display = 'block';
@@ -1387,6 +1502,7 @@
       document.getElementById('otro-id').value = '';
       document.getElementById('otro-nombre').value = '';
       document.getElementById('otro-precio').value = '';
+      document.getElementById('otro-ganancia').value = '';
       document.getElementById('otro-form-title').innerText = "Agregar / Editar Otro Producto";
       document.getElementById('btn-save-otro').innerText = "Guardar Producto";
       document.getElementById('btn-cancel-otro').style.display = 'none';
@@ -1400,6 +1516,7 @@
           <tr>
             <td><b>${o.nombre}</b></td>
             <td>$${o.precio !== '' ? o.precio : 0}</td>
+            <td>$${o.ganancia || 0}</td>
             <td>
               <button onclick="editarOtro(${o.id})" class="btn-icon" title="Editar">✏️</button>
               <button onclick="eliminarOtro(${o.id})" class="btn-icon" title="Eliminar">🗑️</button>
@@ -1416,9 +1533,254 @@
       renderVentas();
     }
 
+    // PRODUCTOS DEL HOGAR (escobas, cubetas, químicos, etc.) — administración en la pestaña "Casa".
+    function poblarSelectCategoriasCasa() {
+      const sel = document.getElementById('casa-categoria');
+      sel.innerHTML = CATEGORIAS_CASA.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function guardarProductoCasa(e) {
+      e.preventDefault();
+      const id = document.getElementById('casa-id').value;
+      const nombre = document.getElementById('casa-nombre').value;
+      const categoria = document.getElementById('casa-categoria').value;
+      const precioVal = document.getElementById('casa-precio').value;
+      const precio = precioVal !== '' ? Math.round(parseFloat(precioVal)) : '';
+      // La ganancia es opcional: si se deja en blanco, vale 0 (válido, no bloquea nada).
+      const gananciaVal = document.getElementById('casa-ganancia').value;
+      const ganancia = gananciaVal !== '' ? Math.round(parseFloat(gananciaVal)) : 0;
+
+      if (id) {
+        const idx = productosCasa.findIndex(p => p.id == id);
+        if (idx !== -1) productosCasa[idx] = { ...productosCasa[idx], nombre, categoria, precio, ganancia };
+      } else {
+        productosCasa.push({ id: Date.now(), nombre, categoria, precio, ganancia });
+      }
+
+      localStorage.setItem('pos_productos_casa', JSON.stringify(productosCasa));
+      cancelarEdicionProductoCasa();
+      renderCasaAdmin();
+      renderProductosCasaVenta();
+    }
+
+    function editarProductoCasa(id) {
+      const p = productosCasa.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('casa-id').value = p.id;
+      document.getElementById('casa-nombre').value = p.nombre;
+      document.getElementById('casa-categoria').value = p.categoria || CATEGORIAS_CASA[0];
+      document.getElementById('casa-precio').value = p.precio !== undefined ? p.precio : '';
+      document.getElementById('casa-ganancia').value = (p.ganancia !== undefined && p.ganancia !== null) ? p.ganancia : 0;
+      document.getElementById('casa-form-title').innerText = "Editar Producto del Hogar";
+      document.getElementById('btn-save-casa').innerText = "Actualizar Producto";
+      document.getElementById('btn-cancel-casa').style.display = 'block';
+    }
+
+    function cancelarEdicionProductoCasa() {
+      document.getElementById('casa-id').value = '';
+      document.getElementById('casa-nombre').value = '';
+      document.getElementById('casa-categoria').value = CATEGORIAS_CASA[0];
+      document.getElementById('casa-precio').value = '';
+      document.getElementById('casa-ganancia').value = '';
+      document.getElementById('casa-form-title').innerText = "Agregar / Editar Producto del Hogar";
+      document.getElementById('btn-save-casa').innerText = "Guardar Producto";
+      document.getElementById('btn-cancel-casa').style.display = 'none';
+    }
+
+    function renderCasaAdmin() {
+      const tb = document.getElementById('tabla-casa');
+      tb.innerHTML = '';
+      if (productosCasa.length === 0) {
+        tb.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:12px;">Todavía no agregas productos del hogar.</td></tr>`;
+        return;
+      }
+      productosCasa.forEach(p => {
+        tb.innerHTML += `
+          <tr>
+            <td><b>${p.nombre}</b></td>
+            <td>${p.categoria || ''}</td>
+            <td>$${p.precio !== '' ? p.precio : 0}</td>
+            <td>$${p.ganancia || 0}</td>
+            <td>
+              <button onclick="editarProductoCasa(${p.id})" class="btn-icon" title="Editar">✏️</button>
+              <button onclick="eliminarProductoCasa(${p.id})" class="btn-icon" title="Eliminar">🗑️</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function eliminarProductoCasa(id) {
+      productosCasa = productosCasa.filter(p => p.id !== id);
+      localStorage.setItem('pos_productos_casa', JSON.stringify(productosCasa));
+      renderCasaAdmin();
+      renderProductosCasaVenta();
+    }
+
+    // --- Buscador + lista en la pantalla de Caja (no aparecen como botones de toque rápido) ---
+    function toggleVerTodosCasa() {
+      casaExpandido = !casaExpandido;
+      const btn = document.getElementById('btn-ver-todos-casa');
+      if (btn) btn.innerText = casaExpandido ? 'Ocultar ▴' : 'Ver todos ▾';
+      renderProductosCasaVenta();
+    }
+
+    function filaProductoCasaHTML(p) {
+      return `
+        <div class="cart-item">
+          <div class="cart-item-info" style="cursor:pointer;" onclick="agregarProductoCasaRapido(${p.id})" title="Tocar para agregar 1">
+            <h4>${p.nombre}</h4>
+            <p>$${p.precio || 0}${p.categoria ? ' · ' + p.categoria : ''}</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="number" min="1" placeholder="1" id="cant-casa-${p.id}" style="width: 48px; padding: 6px; text-align:center;">
+            <button type="button" class="btn" style="padding: 6px 8px; font-size: 11px;" onclick="agregarProductoCasaConCantidad(${p.id})">+ Agregar</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProductosCasaVenta() {
+      const cont = document.getElementById('lista-casa-venta');
+      if (!cont) return;
+      const buscar = (document.getElementById('buscar-casa').value || '').trim().toLowerCase();
+
+      let lista;
+      if (buscar) {
+        lista = productosCasa.filter(p => p.nombre.toLowerCase().includes(buscar));
+      } else if (casaExpandido) {
+        lista = productosCasa;
+      } else {
+        cont.innerHTML = `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 8px;">Escribe para buscar, o toca "Ver todos" para ver la lista completa por categoría.</p>`;
+        return;
+      }
+
+      if (lista.length === 0) {
+        cont.innerHTML = `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 8px;">No se encontró ningún producto con ese nombre.</p>`;
+        return;
+      }
+
+      if (!buscar && casaExpandido) {
+        // Sin búsqueda y con la lista completa desplegada: agrupar por categoría para que sea fácil de explorar.
+        const porCategoria = {};
+        lista.forEach(p => {
+          const cat = p.categoria || 'Otros';
+          if (!porCategoria[cat]) porCategoria[cat] = [];
+          porCategoria[cat].push(p);
+        });
+        cont.innerHTML = Object.keys(porCategoria).map(cat => `
+          <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); margin-top: 8px; text-transform: uppercase;">${cat}</div>
+          ${porCategoria[cat].map(filaProductoCasaHTML).join('')}
+        `).join('');
+      } else {
+        cont.innerHTML = lista.map(filaProductoCasaHTML).join('');
+      }
+    }
+
+    function agregarProductoCasaCantidad(id, cant) {
+      const prod = productosCasa.find(p => p.id === id);
+      if (!prod) return;
+      if (!prod.precio || prod.precio <= 0) return alert(`"${prod.nombre}" no tiene precio configurado. Ponle un precio en la pestaña "Casa" antes de venderlo.`);
+      const cantidadFinal = Math.max(1, cant);
+      const subtotal = (prod.precio || 0) * cantidadFinal;
+      const ganancia = (prod.ganancia || 0) * cantidadFinal;
+      agregarAlCarrito(prod.nombre, subtotal, ganancia, `${cantidadFinal} pza${cantidadFinal > 1 ? 's' : ''}`, 0, prod.id);
+    }
+
+    // Tocar el nombre del producto: agrega 1 de inmediato (como los botones de toque rápido de líquidos).
+    function agregarProductoCasaRapido(id) {
+      agregarProductoCasaCantidad(id, 1);
+    }
+
+    // Botón "+ Agregar": usa la cantidad escrita junto al producto (para pedir varias piezas de una vez).
+    function agregarProductoCasaConCantidad(id) {
+      const input = document.getElementById(`cant-casa-${id}`);
+      const cant = Math.max(1, parseInt(input.value) || 1);
+      agregarProductoCasaCantidad(id, cant);
+      input.value = '';
+    }
+
+    // Agrupa cuentas (ya en orden cronológico) en bloques por FECHA exacta (para el reporte semanal).
+    function agruparPorFecha(cuentasOrdenadas) {
+      const grupos = [];
+      const mapa = {};
+      cuentasOrdenadas.forEach(c => {
+        if (!mapa[c.fecha]) {
+          mapa[c.fecha] = { clave: c.fecha, titulo: obtenerFechaTextoLocal(c.fecha), cuentas: [] };
+          grupos.push(mapa[c.fecha]);
+        }
+        mapa[c.fecha].cuentas.push(c);
+      });
+      return grupos;
+    }
+
+    // Agrupa cuentas (ya en orden cronológico) en bloques por SEMANA (lunes a domingo, para el reporte mensual).
+    function agruparPorSemana(cuentasOrdenadas) {
+      const grupos = [];
+      const mapa = {};
+      let contador = 0;
+      cuentasOrdenadas.forEach(c => {
+        const lunes = fechaLocalISO(obtenerLunesSemana(parsearFechaLocal(c.fecha)));
+        if (!mapa[lunes]) {
+          contador++;
+          const domingo = new Date(parsearFechaLocal(lunes));
+          domingo.setDate(domingo.getDate() + 6);
+          const tituloRango = `${obtenerFechaTextoLocal(lunes)} al ${obtenerFechaTextoLocal(fechaLocalISO(domingo))}`;
+          mapa[lunes] = { clave: lunes, titulo: `Semana ${contador}: ${tituloRango}`, cuentas: [] };
+          grupos.push(mapa[lunes]);
+        }
+        mapa[lunes].cuentas.push(c);
+      });
+      return grupos;
+    }
+
+    // Arma las filas <tr> de un bloque de cuentas. En la columna de hora, incluye la fecha solo
+    // cuando el bloque abarca varios días (reporte mensual agrupado por semana) para no perder el hilo.
+    function filasDeCuentas(listaCuentas, incluirFechaEnColumna) {
+      let html = '';
+      listaCuentas.forEach(c => {
+        c.items.forEach(i => {
+          const horaTxt = i.hora || c.hora || '--:--';
+          html += `
+            <tr>
+              <td>${incluirFechaEnColumna ? obtenerFechaCortaLocal(c.fecha) + ' · ' : ''}${horaTxt}</td>
+              <td><b>${i.producto}</b></td>
+              <td>${i.cantidad}</td>
+              <td>$${i.subtotal.toFixed(2)}</td>
+              <td>$${i.ganancia.toFixed(2)}</td>
+            </tr>
+          `;
+        });
+      });
+      return html;
+    }
+
+    function tablaConEncabezado(filasHTML, modo) {
+      return `
+        <table class="pdf-table-clean">
+          <thead>
+            <tr>
+              <th>${modo === 'mensual' ? 'FECHA · HORA' : 'HORA'}</th>
+              <th>PRODUCTO / PROMO</th>
+              <th>CANTIDAD</th>
+              <th>SUBTOTAL</th>
+              <th>GANANCIA</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filasHTML}
+          </tbody>
+        </table>
+      `;
+    }
+
     // GENERADOR PDF — ahora con 3 modos: diario, semanal (lunes a domingo) y mensual (mes calendario).
     // Los reportes son simples filtros de fecha sobre "cuentas" (que conserva TODO el historial,
     // nunca se borra), así que "semanal"/"mensual" nunca pierden datos ni muestran historial completo de más.
+    //
+    // En semanal, las ventas se agrupan por DÍA (con el nombre del día en negrita arriba, igual que el
+    // reporte diario) para que se vea claro dónde termina un día y empieza el siguiente. En mensual, se
+    // agrupan por SEMANA ("Semana 1", "Semana 2"...) para no perderse entre tantos días del mes.
     function construirHTMLPDF(modo, fechaSel, incluirLitrosPorProducto) {
       let titulo = "📜 Reporte de Ventas";
       let subtitulo = "";
@@ -1447,26 +1809,35 @@
       let totalVentas = 0;
       let totalGanancias = 0;
       let totalCuentas = cuentasFiltradas.length;
-      let filasHTML = "";
-
       cuentasFiltradas.forEach(c => {
         c.items.forEach(i => {
           totalVentas += i.subtotal;
           totalGanancias += i.ganancia;
-          filasHTML += `
-            <tr>
-              <td>${i.hora || c.hora || '--:--'}</td>
-              <td><b>${i.producto}</b></td>
-              <td>${i.cantidad}</td>
-              <td>$${i.subtotal.toFixed(2)}</td>
-              <td>$${i.ganancia.toFixed(2)}</td>
-            </tr>
-          `;
         });
       });
 
+      let cuerpoTablasHTML = '';
       if (cuentasFiltradas.length === 0) {
-        filasHTML = `<tr><td colspan="5" style="text-align:center; color:#8e8e93; padding:15px;">No hay ventas registradas en este periodo.</td></tr>`;
+        cuerpoTablasHTML = tablaConEncabezado(
+          `<tr><td colspan="5" style="text-align:center; color:#8e8e93; padding:15px;">No hay ventas registradas en este periodo.</td></tr>`,
+          modo
+        );
+      } else if (modo === 'semanal') {
+        // Un bloque con encabezado en negrita por cada día (Lunes, Martes...), igual que el reporte diario.
+        const grupos = agruparPorFecha(cuentasFiltradas);
+        cuerpoTablasHTML = grupos.map(g => `
+          <div class="pdf-group-header">${g.titulo}</div>
+          ${tablaConEncabezado(filasDeCuentas(g.cuentas, false), 'diario')}
+        `).join('');
+      } else if (modo === 'mensual') {
+        // Un bloque con encabezado en negrita por cada semana ("Semana 1: lunes ... al domingo ...").
+        const grupos = agruparPorSemana(cuentasFiltradas);
+        cuerpoTablasHTML = grupos.map(g => `
+          <div class="pdf-group-header">${g.titulo}</div>
+          ${tablaConEncabezado(filasDeCuentas(g.cuentas, true), 'mensual')}
+        `).join('');
+      } else {
+        cuerpoTablasHTML = tablaConEncabezado(filasDeCuentas(cuentasFiltradas, false), 'diario');
       }
 
       // Desglose de litros vendidos por producto (solo para el apartado de Reportes, no para
@@ -1504,20 +1875,7 @@
           <div class="pdf-header-title">${titulo}</div>
           <div class="pdf-header-date">${subtitulo}</div>
 
-          <table class="pdf-table-clean">
-            <thead>
-              <tr>
-                <th>HORA</th>
-                <th>PRODUCTO / PROMO</th>
-                <th>CANTIDAD</th>
-                <th>SUBTOTAL</th>
-                <th>GANANCIA</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filasHTML}
-            </tbody>
-          </table>
+          ${cuerpoTablasHTML}
 
           <div class="pdf-summary-card">
             <div class="pdf-summary-title">💰 Resumen</div>
