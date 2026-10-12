@@ -13,12 +13,13 @@
   <meta name="application-name" content="Venta de jabon micar">
   <meta name="theme-color" content="#121212">
 
-  <!-- FAVICON E ÍCONOS INTEGRADOS -->
-  <link rel="icon" type="image/png" sizes="192x192" href="https://i.ibb.co/3yk558N/micar-blue-logo.jpg">
-  <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/3yk558N/micar-blue-logo.jpg">
-  <link rel="icon" type="image/png" sizes="16x16" href="https://i.ibb.co/3yk558N/micar-blue-logo.jpg">
-  <link rel="apple-touch-icon" sizes="180x180" href="https://i.ibb.co/3yk558N/micar-blue-logo.jpg">
-  <link rel="apple-touch-icon-precomposed" href="https://i.ibb.co/3yk558N/micar-blue-logo.jpg">
+  <!-- FAVICON E ÍCONOS INTEGRADOS (logo Micar, archivos propios subidos junto con index.html) -->
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png">
 
   <!-- MANIFIESTO PWA (archivo separado, necesario para que funcione el modo sin conexión) -->
   <link rel="manifest" href="manifest.json">
@@ -367,13 +368,16 @@
           <div id="wrap-cobro-dinero" class="input-row" style="display: none;">
             <div class="form-group" style="flex: 2;">
               <label>Producto</label>
-              <select id="prod-dinero"></select>
+              <select id="prod-dinero" onchange="previsualizarDinero()"></select>
             </div>
             <div class="form-group" style="flex: 1;">
               <label>Monto ($)</label>
-              <input type="number" step="1" id="monto-dinero" placeholder="0">
+              <input type="number" step="1" id="monto-dinero" placeholder="0" oninput="previsualizarDinero()">
             </div>
             <button class="btn" onclick="agregarPorDineroRedondeado()">+ Agregar</button>
+            <div class="form-group" style="flex-basis: 100%; margin: 0;">
+              <p id="txt-preview-dinero" style="font-size: 12px; color: #2dd4bf; font-weight: 600; min-height: 14px;"></p>
+            </div>
           </div>
         </div>
 
@@ -830,6 +834,40 @@
       renderCarrito();
     }
 
+    // Redondea hacia arriba al litro COMPLETO según el dinero ofrecido (ej. $50 de un producto de
+    // $18/L son 2.78L -> se redondea a 3L, cobrando lo que valen esos 3L completos: $54).
+    // Se resta un margen mínimo antes de Math.ceil para que montos que caen EXACTOS en un litro
+    // (ej. $36 = 2L) no se pasen de más por un error de punto flotante.
+    function calcularLitrosRedondeados(monto, precio) {
+      if (!precio || precio <= 0) return { litros: 0, subtotal: 0 };
+      const litrosExactos = monto / precio;
+      const litros = Math.max(0, Math.ceil(litrosExactos - 0.001));
+      const subtotal = litros * precio;
+      return { litros, subtotal };
+    }
+
+    function previsualizarDinero() {
+      const texto = document.getElementById('txt-preview-dinero');
+      if (!texto) return;
+      const monto = Math.round(parseFloat(document.getElementById('monto-dinero').value)) || 0;
+      const valSelect = document.getElementById('prod-dinero').value;
+      if (!monto || monto <= 0 || !valSelect) { texto.innerText = ''; return; }
+      const prod = productos.find(p => p.id === parseInt(valSelect));
+      if (!prod || !prod.precio || prod.precio <= 0) { texto.innerText = ''; return; }
+
+      const { litros, subtotal } = calcularLitrosRedondeados(monto, prod.precio);
+      if (litros <= 0) { texto.innerText = `Con $${monto} no alcanza ni 1 litro de ${prod.nombre} (precio: $${prod.precio}/L).`; return; }
+
+      const diferencia = subtotal - monto;
+      if (diferencia > 0.009 && litros > 1) {
+        texto.innerText = `≈ ${litros} L = $${subtotal.toFixed(2)} (+$${diferencia.toFixed(2)} sobre los $${monto} — si no quiere pagar la diferencia, baja el monto para que dé ${litros - 1} L)`;
+      } else if (diferencia > 0.009) {
+        texto.innerText = `≈ ${litros} L = $${subtotal.toFixed(2)} (+$${diferencia.toFixed(2)} sobre los $${monto})`;
+      } else {
+        texto.innerText = `= ${litros} L = $${subtotal.toFixed(2)}`;
+      }
+    }
+
     function agregarPorDineroRedondeado() {
       const monto = Math.round(parseFloat(document.getElementById('monto-dinero').value)) || 0;
       const valSelect = document.getElementById('prod-dinero').value;
@@ -842,13 +880,16 @@
 
       const precioReal = prod.precio || 0;
       const gananciaReal = prod.ganancia || 0;
-      const litrosCalculados = precioReal > 0 ? (monto / precioReal) : 0;
-      const cobroFinal = monto;
-      const gananciaTotal = Math.ceil(gananciaReal * litrosCalculados);
 
-      agregarAlCarrito(prod.nombre, cobroFinal, gananciaTotal, `${litrosCalculados.toFixed(2)} L`, litrosCalculados, prod.id);
+      const { litros: litrosFinal, subtotal: subtotalFinal } = calcularLitrosRedondeados(monto, precioReal);
+      if (litrosFinal <= 0) return alert(`Con $${monto} no alcanza ni 1 litro de este producto.`);
+
+      const gananciaTotal = Math.ceil(gananciaReal * litrosFinal);
+
+      agregarAlCarrito(prod.nombre, subtotalFinal, gananciaTotal, `${litrosFinal} L`, litrosFinal, prod.id);
       document.getElementById('monto-dinero').value = '';
       document.getElementById('prod-dinero').value = '';
+      document.getElementById('txt-preview-dinero').innerText = '';
     }
 
     function agregarPorLitrosDirectos() {
@@ -1378,33 +1419,33 @@
     // GENERADOR PDF — ahora con 3 modos: diario, semanal (lunes a domingo) y mensual (mes calendario).
     // Los reportes son simples filtros de fecha sobre "cuentas" (que conserva TODO el historial,
     // nunca se borra), así que "semanal"/"mensual" nunca pierden datos ni muestran historial completo de más.
-    function construirHTMLPDF(modo, fechaSel) {
+    function construirHTMLPDF(modo, fechaSel, incluirLitrosPorProducto) {
       let titulo = "📜 Reporte de Ventas";
       let subtitulo = "";
-      let etiquetaGanancia = "Ganancias";
       let cuentasFiltradas = [];
 
       if (modo === 'semanal') {
         const { inicio, fin } = obtenerRangoSemana(fechaSel || fechaLocalISO());
         subtitulo = `Cierre Semanal: ${obtenerFechaTextoLocal(inicio)} al ${obtenerFechaTextoLocal(fin)}`;
-        etiquetaGanancia = "Ganancias de la semana";
         cuentasFiltradas = cuentas.filter(c => c.fecha >= inicio && c.fecha <= fin);
       } else if (modo === 'mensual') {
         const refFecha = fechaSel ? `${fechaSel}-01` : fechaLocalISO();
         const { inicio, fin } = obtenerRangoMes(refFecha);
         const nombreMes = parsearFechaLocal(inicio).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
         subtitulo = `Cierre Mensual: ${nombreMes}`;
-        etiquetaGanancia = "Ganancias del mes";
         cuentasFiltradas = cuentas.filter(c => c.fecha >= inicio && c.fecha <= fin);
       } else {
         subtitulo = obtenerFechaTextoLocal(fechaSel);
-        etiquetaGanancia = "Ganancias del día";
         cuentasFiltradas = cuentas.filter(c => c.fecha === fechaSel);
       }
 
+      // "cuentas" guarda la más reciente primero (unshift al cobrar), así que aquí se invierte
+      // el orden para que el PDF se lea de forma natural: la primera venta del periodo arriba,
+      // la última abajo (antes salía al revés).
+      cuentasFiltradas = cuentasFiltradas.slice().reverse();
+
       let totalVentas = 0;
       let totalGanancias = 0;
-      let totalLitros = 0;
       let totalCuentas = cuentasFiltradas.length;
       let filasHTML = "";
 
@@ -1412,10 +1453,9 @@
         c.items.forEach(i => {
           totalVentas += i.subtotal;
           totalGanancias += i.ganancia;
-          totalLitros += Number(i.litros) || 0;
           filasHTML += `
             <tr>
-              <td>${modo === 'diario' ? (i.hora || c.hora || '--:--') : c.fecha}</td>
+              <td>${i.hora || c.hora || '--:--'}</td>
               <td><b>${i.producto}</b></td>
               <td>${i.cantidad}</td>
               <td>$${i.subtotal.toFixed(2)}</td>
@@ -1429,6 +1469,36 @@
         filasHTML = `<tr><td colspan="5" style="text-align:center; color:#8e8e93; padding:15px;">No hay ventas registradas en este periodo.</td></tr>`;
       }
 
+      // Desglose de litros vendidos por producto (solo para el apartado de Reportes, no para
+      // el PDF rápido de "Historial de hoy"). Se junta diario, semanal o mensual según el modo,
+      // porque usa las mismas cuentasFiltradas ya filtradas por el rango correspondiente.
+      let litrosPorProductoHTML = '';
+      if (incluirLitrosPorProducto) {
+        const mapaLitros = {};
+        cuentasFiltradas.forEach(c => {
+          c.items.forEach(i => {
+            const lit = Number(i.litros) || 0;
+            if (lit > 0) {
+              mapaLitros[i.producto] = (mapaLitros[i.producto] || 0) + lit;
+            }
+          });
+        });
+        const listaLitros = Object.entries(mapaLitros).sort((a, b) => b[1] - a[1]);
+        if (listaLitros.length > 0) {
+          litrosPorProductoHTML = `
+            <div class="pdf-summary-card">
+              <div class="pdf-summary-title">🪣 Litros vendidos por producto</div>
+              ${listaLitros.map(([nombre, litros]) => `
+                <div class="pdf-summary-row">
+                  <span>${nombre}</span>
+                  <b>${litros.toFixed(2)} L</b>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+
       return `
         <div class="pdf-container-export">
           <div class="pdf-header-title">${titulo}</div>
@@ -1437,7 +1507,7 @@
           <table class="pdf-table-clean">
             <thead>
               <tr>
-                <th>${modo === 'diario' ? 'HORA' : 'FECHA'}</th>
+                <th>HORA</th>
                 <th>PRODUCTO / PROMO</th>
                 <th>CANTIDAD</th>
                 <th>SUBTOTAL</th>
@@ -1456,18 +1526,16 @@
               <b>${totalCuentas}</b>
             </div>
             <div class="pdf-summary-row">
-              <span>Total de litros vendidos</span>
-              <b>${totalLitros.toFixed(2)} L</b>
-            </div>
-            <div class="pdf-summary-row">
               <span>Total de ventas</span>
               <b>$${totalVentas.toFixed(2)}</b>
             </div>
             <div class="pdf-summary-row total-bold">
-              <span>${etiquetaGanancia}</span>
+              <span>Ganancias del día</span>
               <b>$${totalGanancias.toFixed(2)}</b>
             </div>
           </div>
+
+          ${litrosPorProductoHTML}
         </div>
       `;
     }
@@ -1488,12 +1556,14 @@
       } else {
         fechaSel = document.getElementById('fecha-reporte-diario').value; // "YYYY-MM-DD"
       }
-      previewBox.innerHTML = construirHTMLPDF(tipo, fechaSel);
+      // El apartado de Reportes SIEMPRE incluye el desglose de litros por producto (diario, semanal o mensual).
+      previewBox.innerHTML = construirHTMLPDF(tipo, fechaSel, true);
     }
 
+    // Botón "Guardar" de Historial de hoy (pestaña Caja): PDF simple, SIN el desglose de litros por producto.
     function descargarPDFHoy() {
       const hoyStr = fechaLocalISO();
-      descargarPDFPorFecha(hoyStr);
+      descargarPDFPorFecha(hoyStr, false);
     }
 
     function descargarPDFActual() {
@@ -1501,18 +1571,19 @@
 
       if (tipo === 'semanal') {
         const { inicio, fin } = obtenerRangoSemana(fechaLocalISO());
-        generarPDFDesdeHTML(construirHTMLPDF('semanal', fechaLocalISO()), `Cierre_Semanal_${inicio}_a_${fin}.pdf`);
+        generarPDFDesdeHTML(construirHTMLPDF('semanal', fechaLocalISO(), true), `Cierre_Semanal_${inicio}_a_${fin}.pdf`);
       } else if (tipo === 'mensual') {
         const fechaSel = document.getElementById('fecha-reporte-mensual').value;
-        generarPDFDesdeHTML(construirHTMLPDF('mensual', fechaSel), `Cierre_Mensual_${fechaSel}.pdf`);
+        generarPDFDesdeHTML(construirHTMLPDF('mensual', fechaSel, true), `Cierre_Mensual_${fechaSel}.pdf`);
       } else {
         const fechaSel = document.getElementById('fecha-reporte-diario').value;
-        descargarPDFPorFecha(fechaSel);
+        // Botón "Descargar PDF" dentro de Reportes (modo diario): SÍ incluye el desglose de litros.
+        descargarPDFPorFecha(fechaSel, true);
       }
     }
 
-    function descargarPDFPorFecha(fechaTarget) {
-      const htmlContent = construirHTMLPDF('diario', fechaTarget);
+    function descargarPDFPorFecha(fechaTarget, incluirLitrosPorProducto = false) {
+      const htmlContent = construirHTMLPDF('diario', fechaTarget, incluirLitrosPorProducto);
       generarPDFDesdeHTML(htmlContent, `Reporte_Ventas_${fechaTarget}.pdf`);
     }
 
