@@ -1015,9 +1015,12 @@
       document.getElementById('prod-litros').value = '';
     }
 
-    function agregarAlCarrito(nombre, subtotal, ganancia, cantTxt, litrosNum, prodId) {
+    // tipo/piezasNum son opcionales (solo los usan los productos del hogar, para poder separarlos
+    // después en el reporte bajo "Productos vendidos de casa"); el resto de llamadas no los manda
+    // y se quedan en null/0 sin afectar nada de lo que ya funcionaba.
+    function agregarAlCarrito(nombre, subtotal, ganancia, cantTxt, litrosNum, prodId, tipo = null, piezasNum = 0) {
       const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
-      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: ganancia, prodId });
+      carrito.push({ hora, producto: nombre, cantidad: cantTxt, litros: litrosNum, subtotal, ganancia: ganancia, prodId, tipo, piezas: piezasNum });
       renderCarrito();
     }
 
@@ -1684,7 +1687,7 @@
       const cantidadFinal = Math.max(1, cant);
       const subtotal = (prod.precio || 0) * cantidadFinal;
       const ganancia = (prod.ganancia || 0) * cantidadFinal;
-      agregarAlCarrito(prod.nombre, subtotal, ganancia, `${cantidadFinal} pza${cantidadFinal > 1 ? 's' : ''}`, 0, prod.id);
+      agregarAlCarrito(prod.nombre, subtotal, ganancia, `${cantidadFinal} pza${cantidadFinal > 1 ? 's' : ''}`, 0, prod.id, 'casa', cantidadFinal);
     }
 
     // Tocar el nombre del producto: agrega 1 de inmediato (como los botones de toque rápido de líquidos).
@@ -1870,6 +1873,49 @@
         }
       }
 
+      // Desglose de productos del hogar vendidos (escobas, cubetas, etc.), igual que el desglose de
+      // litros pero contando piezas por producto (se detectan por item.tipo === 'casa', sin importar
+      // si comparten la misma nota/cuenta que productos líquidos). El resumen general de arriba ya
+      // incluye estas ventas sumadas a todo; aquí es solo para verlas aparte y llevar su propio control.
+      let productosCasaHTML = '';
+      if (incluirLitrosPorProducto) {
+        const mapaCasa = {};
+        let totalVentasCasa = 0;
+        let totalGananciaCasa = 0;
+        cuentasFiltradas.forEach(c => {
+          c.items.forEach(i => {
+            if (i.tipo === 'casa') {
+              const piezas = Number(i.piezas) || 0;
+              mapaCasa[i.producto] = (mapaCasa[i.producto] || 0) + piezas;
+              totalVentasCasa += i.subtotal;
+              totalGananciaCasa += i.ganancia;
+            }
+          });
+        });
+        const listaCasa = Object.entries(mapaCasa).sort((a, b) => b[1] - a[1]);
+        if (listaCasa.length > 0) {
+          productosCasaHTML = `
+            <div class="pdf-summary-card">
+              <div class="pdf-summary-title">🧹 Productos vendidos de casa</div>
+              ${listaCasa.map(([nombre, piezas]) => `
+                <div class="pdf-summary-row">
+                  <span>${nombre}</span>
+                  <b>${piezas} pza${piezas !== 1 ? 's' : ''}</b>
+                </div>
+              `).join('')}
+              <div class="pdf-summary-row" style="margin-top: 8px; border-top: 1px solid #d8d8d8; padding-top: 6px;">
+                <span>Total de ventas</span>
+                <b>$${totalVentasCasa.toFixed(2)}</b>
+              </div>
+              <div class="pdf-summary-row total-bold">
+                <span>Ganancias del día</span>
+                <b>$${totalGananciaCasa.toFixed(2)}</b>
+              </div>
+            </div>
+          `;
+        }
+      }
+
       return `
         <div class="pdf-container-export">
           <div class="pdf-header-title">${titulo}</div>
@@ -1894,6 +1940,7 @@
           </div>
 
           ${litrosPorProductoHTML}
+          ${productosCasaHTML}
         </div>
       `;
     }

@@ -5,13 +5,21 @@
 // manifest.json, y debe registrarse como 'sw.js' (una URL normal), nunca como blob:,
 // porque Chrome rechaza explícitamente registrar Service Workers desde blob: URLs.
 
-const CACHE_NAME = 'pos-micar-v1';
+const CACHE_NAME = 'pos-micar-v4';
 
 // Archivos base de la app que se guardan de inmediato al instalar el Service Worker.
+// IMPORTANTE: si alguno de estos nombres no coincide EXACTO con el archivo subido
+// (mayúsculas/minúsculas, guiones, extensión), falla la instalación completa del
+// Service Worker y el modo sin conexión no queda activado.
 const APP_SHELL = [
   './',
   'index.html',
-  'manifest.json'
+  'manifest.json',
+  'icon-192.png',
+  'icon-512.png',
+  'apple-touch-icon.png',
+  'favicon-32.png',
+  'favicon-16.png'
 ];
 
 self.addEventListener('install', (event) => {
