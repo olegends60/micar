@@ -5,16 +5,22 @@
 // manifest.json, y debe registrarse como 'sw.js' (una URL normal), nunca como blob:,
 // porque Chrome rechaza explícitamente registrar Service Workers desde blob: URLs.
 
-const CACHE_NAME = 'pos-micar-v4';
+// Cambia este número cada vez que subas una versión nueva de index.html para que los celulares la reciban.
+const CACHE_NAME = 'pos-micar-v5';
 
 // Archivos base de la app que se guardan de inmediato al instalar el Service Worker.
 // IMPORTANTE: si alguno de estos nombres no coincide EXACTO con el archivo subido
 // (mayúsculas/minúsculas, guiones, extensión), falla la instalación completa del
 // Service Worker y el modo sin conexión no queda activado.
+// Archivos obligatorios (si falta uno, no se activa el modo sin conexión).
 const APP_SHELL = [
   './',
   'index.html',
-  'manifest.json',
+  'manifest.json'
+];
+
+// Íconos opcionales: si todavía no están subidos, NO deben tumbar la instalación.
+const ICONOS_OPCIONALES = [
   'icon-192.png',
   'icon-512.png',
   'apple-touch-icon.png',
@@ -25,7 +31,9 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.addAll(APP_SHELL).then(() =>
+        Promise.all(ICONOS_OPCIONALES.map((url) => cache.add(url).catch(() => null)))
+      ))
       .then(() => self.skipWaiting())
   );
 });
@@ -44,6 +52,22 @@ self.addEventListener('activate', (event) => {
 // y en paralelo ir a la red para actualizar la caché para la próxima vez.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // La página principal: primero internet (para recibir cambios al momento) y, sin internet, la copia guardada.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copia = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copia));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('index.html')))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

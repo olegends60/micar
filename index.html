@@ -519,6 +519,10 @@
           <button class="btn btn-secondary" style="flex: 1;" onclick="document.getElementById('input-importar').click()">⬆️ Importar</button>
         </div>
         <input type="file" id="input-importar" accept="application/json" style="display: none;" onchange="importarRespaldo(event)">
+
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">📱 <b>Celular nuevo en ceros:</b> cada celular guarda sus propias ventas. Si abres el link en otro celular, empieza en $0. Con este botón pasas solo tus productos y precios (líquidos, combos, otros y casa), <b>sin ventas</b>, para que empiece a sumar desde cero.</p>
+        <button class="btn btn-secondary" onclick="document.getElementById('input-importar-catalogo').click()">⬆️ Importar solo productos y precios (ventas en $0)</button>
+        <input type="file" id="input-importar-catalogo" accept="application/json" style="display: none;" onchange="importarSoloCatalogo(event)">
       </div>
     </div>
 
@@ -665,6 +669,16 @@
         <div id="wrapper-fecha-diario" class="form-group">
           <label>Ver día guardado:</label>
           <input type="date" id="fecha-reporte-diario" onchange="renderReportePreview()">
+        </div>
+
+        <div id="wrapper-fecha-semanal" class="form-group" style="display:none;">
+          <label>Ver semana guardada (elige cualquier día de esa semana):</label>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn btn-secondary" style="padding: 8px 12px;" onclick="moverSemanaReporte(-1)" title="Semana anterior">◀</button>
+            <input type="date" id="fecha-reporte-semanal" onchange="renderReportePreview()" style="flex: 1;">
+            <button type="button" class="btn btn-secondary" style="padding: 8px 12px;" onclick="moverSemanaReporte(1)" title="Semana siguiente">▶</button>
+          </div>
+          <p id="txt-rango-semana" style="font-size: 12px; color: #2dd4bf; font-weight: 600;"></p>
         </div>
 
         <div id="wrapper-fecha-mensual" class="form-group" style="display:none;">
@@ -841,6 +855,7 @@
       if (tab === 'reportes') {
         const hoyStr = fechaLocalISO();
         document.getElementById('fecha-reporte-diario').value = hoyStr;
+        document.getElementById('fecha-reporte-semanal').value = hoyStr;
         document.getElementById('fecha-reporte-mensual').value = hoyStr.slice(0, 7);
         actualizarVistaReporte();
       }
@@ -936,16 +951,20 @@
       renderCarrito();
     }
 
-    // Redondea hacia arriba al litro COMPLETO según el dinero ofrecido (ej. $50 de un producto de
-    // $18/L son 2.78L -> se redondea a 3L, cobrando lo que valen esos 3L completos: $54).
-    // Se resta un margen mínimo antes de Math.ceil para que montos que caen EXACTOS en un litro
-    // (ej. $36 = 2L) no se pasen de más por un error de punto flotante.
-    function calcularLitrosRedondeados(monto, precio) {
-      if (!precio || precio <= 0) return { litros: 0, subtotal: 0 };
-      const litrosExactos = monto / precio;
-      const litros = Math.max(0, Math.ceil(litrosExactos - 0.001));
-      const subtotal = litros * precio;
-      return { litros, subtotal };
+    // VENTA POR DINERO (de 1 litro para arriba): se cobra EXACTO lo que pide el cliente y se calcula
+    // cuántos litros le tocan según el precio por litro de cada producto.
+    // Ej. Ariel a $18/L: $20 = 1.11 L, $25 = 1.39 L, $36 = 2 L. El mínimo es lo que vale 1 litro ($18).
+    function calcularLitrosPorDinero(monto, precio) {
+      if (!precio || precio <= 0) return { litros: 0, subtotal: 0, valido: false };
+      const litros = Math.round((monto / precio) * 1000) / 1000; // hasta mililitros
+      return { litros, subtotal: monto, valido: monto >= precio };
+    }
+
+    // "1.111 L" -> "1.11 L (1,111 ml)" para que sea fácil medirlo
+    function textoLitros(litros) {
+      const ml = Math.round(litros * 1000);
+      const lTxt = Number.isInteger(litros) ? `${litros}` : litros.toFixed(2);
+      return Number.isInteger(litros) ? `${lTxt} L` : `${lTxt} L (${ml.toLocaleString('es-MX')} ml)`;
     }
 
     function previsualizarDinero() {
@@ -957,17 +976,9 @@
       const prod = productos.find(p => p.id === parseInt(valSelect));
       if (!prod || !prod.precio || prod.precio <= 0) { texto.innerText = ''; return; }
 
-      const { litros, subtotal } = calcularLitrosRedondeados(monto, prod.precio);
-      if (litros <= 0) { texto.innerText = `Con $${monto} no alcanza ni 1 litro de ${prod.nombre} (precio: $${prod.precio}/L).`; return; }
-
-      const diferencia = subtotal - monto;
-      if (diferencia > 0.009 && litros > 1) {
-        texto.innerText = `≈ ${litros} L = $${subtotal.toFixed(2)} (+$${diferencia.toFixed(2)} sobre los $${monto} — si no quiere pagar la diferencia, baja el monto para que dé ${litros - 1} L)`;
-      } else if (diferencia > 0.009) {
-        texto.innerText = `≈ ${litros} L = $${subtotal.toFixed(2)} (+$${diferencia.toFixed(2)} sobre los $${monto})`;
-      } else {
-        texto.innerText = `= ${litros} L = $${subtotal.toFixed(2)}`;
-      }
+      const { litros, valido } = calcularLitrosPorDinero(monto, prod.precio);
+      if (!valido) { texto.innerText = `La venta por dinero es de 1 litro para arriba: mínimo $${prod.precio} de ${prod.nombre}.`; return; }
+      texto.innerText = `$${monto} de ${prod.nombre} = ${textoLitros(litros)}  ·  precio $${prod.precio}/L`;
     }
 
     function agregarPorDineroRedondeado() {
@@ -983,12 +994,12 @@
       const precioReal = prod.precio || 0;
       const gananciaReal = prod.ganancia || 0;
 
-      const { litros: litrosFinal, subtotal: subtotalFinal } = calcularLitrosRedondeados(monto, precioReal);
-      if (litrosFinal <= 0) return alert(`Con $${monto} no alcanza ni 1 litro de este producto.`);
+      const { litros: litrosFinal, subtotal: subtotalFinal, valido } = calcularLitrosPorDinero(monto, precioReal);
+      if (!valido) return alert(`La venta por dinero es de 1 litro para arriba. El mínimo de ${prod.nombre} es $${precioReal}.`);
 
-      const gananciaTotal = Math.ceil(gananciaReal * litrosFinal);
+      const gananciaTotal = Math.round(gananciaReal * litrosFinal * 100) / 100;
 
-      agregarAlCarrito(prod.nombre, subtotalFinal, gananciaTotal, `${litrosFinal} L`, litrosFinal, prod.id);
+      agregarAlCarrito(prod.nombre, subtotalFinal, gananciaTotal, textoLitros(litrosFinal), litrosFinal, prod.id);
       document.getElementById('monto-dinero').value = '';
       document.getElementById('prod-dinero').value = '';
       document.getElementById('txt-preview-dinero').innerText = '';
@@ -1385,6 +1396,52 @@
           alert('Respaldo restaurado correctamente.');
         } catch (err) {
           alert('Archivo de respaldo no válido.');
+        } finally {
+          event.target.value = ''; // permite volver a elegir el mismo archivo
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Para un celular nuevo: trae SOLO el catálogo (productos y precios) del respaldo y deja
+    // las ventas, el historial y "Días anteriores" en ceros.
+    function importarSoloCatalogo(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!confirm('Esto pondrá tus productos y precios del respaldo y dejará las ventas de ESTE celular en $0. ¿Continuar?')) return;
+          if (Array.isArray(data.productos)) productos = data.productos;
+          if (Array.isArray(data.promos)) promos = data.promos;
+          if (Array.isArray(data.otros)) otros = data.otros;
+          if (Array.isArray(data.productosCasa)) productosCasa = data.productosCasa;
+          cuentas = [];
+          archivoSemana = [];
+          carrito = [];
+
+          localStorage.setItem('pos_prods', JSON.stringify(productos));
+          localStorage.setItem('pos_promos', JSON.stringify(promos));
+          localStorage.setItem('pos_otros', JSON.stringify(otros));
+          localStorage.setItem('pos_productos_casa', JSON.stringify(productosCasa));
+          localStorage.setItem('pos_cuentas', JSON.stringify(cuentas));
+          localStorage.setItem('pos_archivo_semana', JSON.stringify(archivoSemana));
+
+          renderVentas();
+          renderInventario();
+          renderPromos();
+          renderOtros();
+          renderCasaAdmin();
+          renderProductosCasaVenta();
+          renderHistorialHoy();
+          renderDiasAnteriores();
+          actualizarStats();
+          alert('Listo: productos y precios cargados. Las ventas empiezan en $0.');
+        } catch (err) {
+          alert('Archivo de respaldo no válido.');
+        } finally {
+          event.target.value = '';
         }
       };
       reader.readAsText(file);
@@ -1819,6 +1876,8 @@
         });
       });
 
+      const etiquetaGanancias = modo === 'semanal' ? 'Ganancias de la semana' : (modo === 'mensual' ? 'Ganancias del mes' : 'Ganancias del día');
+
       let cuerpoTablasHTML = '';
       if (cuentasFiltradas.length === 0) {
         cuerpoTablasHTML = tablaConEncabezado(
@@ -1908,7 +1967,7 @@
                 <b>$${totalVentasCasa.toFixed(2)}</b>
               </div>
               <div class="pdf-summary-row total-bold">
-                <span>Ganancias del día</span>
+                <span>${etiquetaGanancias}</span>
                 <b>$${totalGananciaCasa.toFixed(2)}</b>
               </div>
             </div>
@@ -1934,7 +1993,7 @@
               <b>$${totalVentas.toFixed(2)}</b>
             </div>
             <div class="pdf-summary-row total-bold">
-              <span>Ganancias del día</span>
+              <span>${etiquetaGanancias}</span>
               <b>$${totalGanancias.toFixed(2)}</b>
             </div>
           </div>
@@ -1948,7 +2007,21 @@
     function actualizarVistaReporte() {
       const tipo = document.getElementById('tipo-reporte').value;
       document.getElementById('wrapper-fecha-diario').style.display = (tipo === 'diario') ? 'flex' : 'none';
+      document.getElementById('wrapper-fecha-semanal').style.display = (tipo === 'semanal') ? 'flex' : 'none';
       document.getElementById('wrapper-fecha-mensual').style.display = (tipo === 'mensual') ? 'flex' : 'none';
+      renderReportePreview();
+    }
+
+    // Fecha elegida para el cierre semanal (si está vacía, la semana actual)
+    function fechaSemanaSeleccionada() {
+      return document.getElementById('fecha-reporte-semanal').value || fechaLocalISO();
+    }
+
+    // Botones ◀ ▶: brinca 7 días hacia atrás o hacia adelante
+    function moverSemanaReporte(direccion) {
+      const d = parsearFechaLocal(fechaSemanaSeleccionada());
+      d.setDate(d.getDate() + 7 * direccion);
+      document.getElementById('fecha-reporte-semanal').value = fechaLocalISO(d);
       renderReportePreview();
     }
 
@@ -1958,6 +2031,10 @@
       let fechaSel;
       if (tipo === 'mensual') {
         fechaSel = document.getElementById('fecha-reporte-mensual').value; // "YYYY-MM"
+      } else if (tipo === 'semanal') {
+        fechaSel = fechaSemanaSeleccionada(); // cualquier día de la semana elegida
+        const { inicio, fin } = obtenerRangoSemana(fechaSel);
+        document.getElementById('txt-rango-semana').innerText = `Semana del ${obtenerFechaCortaLocal(inicio)} al ${obtenerFechaCortaLocal(fin)}`;
       } else {
         fechaSel = document.getElementById('fecha-reporte-diario').value; // "YYYY-MM-DD"
       }
@@ -1975,8 +2052,9 @@
       const tipo = document.getElementById('tipo-reporte').value;
 
       if (tipo === 'semanal') {
-        const { inicio, fin } = obtenerRangoSemana(fechaLocalISO());
-        generarPDFDesdeHTML(construirHTMLPDF('semanal', fechaLocalISO(), true), `Cierre_Semanal_${inicio}_a_${fin}.pdf`);
+        const fechaSel = fechaSemanaSeleccionada();
+        const { inicio, fin } = obtenerRangoSemana(fechaSel);
+        generarPDFDesdeHTML(construirHTMLPDF('semanal', fechaSel, true), `Cierre_Semanal_${inicio}_a_${fin}.pdf`);
       } else if (tipo === 'mensual') {
         const fechaSel = document.getElementById('fecha-reporte-mensual').value;
         generarPDFDesdeHTML(construirHTMLPDF('mensual', fechaSel, true), `Cierre_Mensual_${fechaSel}.pdf`);
