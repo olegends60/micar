@@ -6,7 +6,7 @@
 // porque Chrome rechaza explícitamente registrar Service Workers desde blob: URLs.
 
 // Cambia este número cada vez que subas una versión nueva de index.html para que los celulares la reciban.
-const CACHE_NAME = 'pos-micar-v6';
+const CACHE_NAME = 'pos-micar-v7';
 
 // Archivos base de la app que se guardan de inmediato al instalar el Service Worker.
 // IMPORTANTE: si alguno de estos nombres no coincide EXACTO con el archivo subido
@@ -44,7 +44,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+        keys.filter((k) => k.startsWith('pos-micar-') && k !== CACHE_NAME).map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );
