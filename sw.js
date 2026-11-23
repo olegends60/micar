@@ -6,7 +6,7 @@
 // porque Chrome rechaza explícitamente registrar Service Workers desde blob: URLs.
 
 // Cambia este número cada vez que subas una versión nueva de index.html para que los celulares la reciban.
-const CACHE_NAME = 'pos-micar-v5';
+const CACHE_NAME = 'pos-micar-v6';
 
 // Archivos base de la app que se guardan de inmediato al instalar el Service Worker.
 // IMPORTANTE: si alguno de estos nombres no coincide EXACTO con el archivo subido
@@ -25,7 +25,9 @@ const ICONOS_OPCIONALES = [
   'icon-512.png',
   'apple-touch-icon.png',
   'favicon-32.png',
-  'favicon-16.png'
+  'favicon-16.png',
+  'icon-maskable-192.png',
+  'icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (event) => {
