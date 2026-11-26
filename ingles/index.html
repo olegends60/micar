@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Talk with Jake · Aprende inglés</title>
+<meta name="theme-color" content="#14213d">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --bg:#eef1f8; --card:#fff; --ink:#14213d; --muted:#5c6378; --line:#dde3ef;
+  --blue:#1d3c8f; --blue-soft:#e6ecfa; --red:#c8323c; --red-soft:#fbe9ea;
+  --green:#1f8a4c; --green-soft:#e3f4ea; --amber:#b76e00; --amber-soft:#fdf1dc;
+  --r:16px; --shadow:0 1px 2px rgba(20,33,61,.06),0 4px 16px rgba(20,33,61,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+#app{max-width:640px;margin:0 auto;padding:16px 16px 96px;min-height:100vh}
+h1,h2,h3{line-height:1.2;margin:0 0 8px}
+h1{font-size:1.6rem} h2{font-size:1.3rem} h3{font-size:1.05rem}
+p{margin:0 0 10px}
+.muted{color:var(--muted)} .small{font-size:.875rem}
+.card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
+.row{display:flex;gap:10px;align-items:center}
+.wrap{flex-wrap:wrap}
+.grow{flex:1}
+.btn{appearance:none;border:0;border-radius:12px;padding:13px 16px;font:600 1rem system-ui,sans-serif;cursor:pointer;background:var(--blue);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px}
+.btn:active{transform:scale(.98)}
+.btn.block{width:100%}
+.btn.ghost{background:var(--blue-soft);color:var(--blue)}
+.btn.red{background:var(--red)}
+.btn.green{background:var(--green)}
+.btn.plain{background:transparent;color:var(--blue);padding:8px 10px;min-height:auto}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.sm{padding:8px 12px;min-height:38px;font-size:.9rem}
+.opt{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:12px;padding:13px 14px;margin:8px 0;font:500 1rem system-ui,sans-serif;color:var(--ink);cursor:pointer}
+.opt.sel{border-color:var(--blue);background:var(--blue-soft)}
+.opt.ok{border-color:var(--green);background:var(--green-soft)}
+.opt.bad{border-color:var(--red);background:var(--red-soft)}
+.opt:disabled{cursor:default}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;letter-spacing:.03em;padding:3px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue)}
+.tag.red{background:var(--red-soft);color:var(--red)}
+.tag.green{background:var(--green-soft);color:var(--green)}
+.tag.amber{background:var(--amber-soft);color:var(--amber)}
+.bar{height:10px;background:#e3e8f2;border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .4s}
+.bar.red>i{background:var(--red)} .bar.green>i{background:var(--green)} .bar.amber>i{background:var(--amber)}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.top .back{font-size:1.4rem;background:none;border:0;color:var(--ink);cursor:pointer;padding:6px 8px}
+.top .bar{flex:1}
+.jake{display:flex;gap:12px;align-items:flex-start}
+.avatar{flex:none;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#3a5fcd);color:#fff;display:grid;place-items:center;font-weight:800;font-size:1.1rem;position:relative}
+.avatar.talking::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:3px solid var(--red);animation:pulse 1s infinite}
+@keyframes pulse{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.25)}}
+.bubble{background:var(--blue-soft);border-radius:4px 16px 16px 16px;padding:11px 14px;flex:1}
+.bubble.me{background:#fff;border:1px solid var(--line);border-radius:16px 4px 16px 16px;margin-left:48px}
+.bubble.coach{background:var(--amber-soft);border-radius:12px;margin-left:58px}
+.en{font-weight:600}
+.es{color:var(--muted);font-size:.92rem}
+.hidden-text{filter:blur(6px);user-select:none;cursor:pointer}
+.say{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:6px 12px;font:600 .875rem system-ui,sans-serif;cursor:pointer}
+.say:active{background:#d3defa}
+.list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.list-item:last-child{border-bottom:0}
+.tip{background:var(--amber-soft);border-radius:10px;padding:10px 12px}
+.tbl{width:100%;border-collapse:collapse;margin:8px 0 12px;font-size:.93rem}
+.tbl th,.tbl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+.tbl th{color:var(--muted);font-weight:600}
+.explain ul{padding-left:20px;margin:6px 0 12px}
+.explain li{margin:4px 0}
+.mic{width:84px;height:84px;border-radius:50%;border:0;background:var(--red);color:#fff;font-size:2rem;cursor:pointer;box-shadow:0 6px 18px rgba(200,50,60,.35)}
+.mic.on{animation:micpulse 1s infinite}
+@keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(200,50,60,.5)}100%{box-shadow:0 0 0 22px rgba(200,50,60,0)}}
+.w-ok{color:var(--green);font-weight:700} .w-bad{color:var(--red);font-weight:700;text-decoration:underline wavy}
+.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:10}
+.nav[hidden]{display:none}
+.nav button{flex:1;max-width:128px;background:none;border:0;font:600 .72rem system-ui,sans-serif;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;cursor:pointer}
+.nav button b{font-size:1.35rem;font-weight:400}
+.nav button.act{color:var(--blue)}
+.lesson-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:1px solid var(--line);margin:8px 0;background:#fff;cursor:pointer;width:100%;text-align:left;font:inherit;color:inherit}
+.lesson-row .dot{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);font-weight:700}
+.lesson-row.done .dot{background:var(--green);color:#fff}
+.lesson-row.locked{opacity:.5}
+.hero{background:linear-gradient(135deg,#14213d,#1d3c8f);color:#fff}
+.hero .muted{color:#c9d3ef}
+.big{font-size:2.6rem;font-weight:800;line-height:1}
+.speedsel{display:flex;gap:6px;flex-wrap:wrap}
+.speedsel button{flex:1;min-width:70px;border:2px solid var(--line);background:#fff;border-radius:10px;padding:8px 4px;font:600 .82rem system-ui,sans-serif;cursor:pointer;color:var(--ink)}
+.speedsel button.sel{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+input[type=text],textarea,select{width:100%;padding:12px;border:2px solid var(--line);border-radius:12px;font:1rem system-ui,sans-serif;background:#fff;color:var(--ink)}
+input[type=text]:focus,textarea:focus{outline:none;border-color:var(--blue)}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;z-index:50;font-weight:600;box-shadow:var(--shadow);max-width:90%}
+.center{text-align:center}
+.mt{margin-top:12px} .mb0{margin-bottom:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chat{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav class="nav" id="nav" hidden>
+  <button data-go="home"><b>🏠</b>Inicio</button>
+  <button data-go="path"><b>📚</b>Lecciones</button>
+  <button data-go="talk"><b>💬</b>Hablar</button>
+  <button data-go="fast"><b>⚡</b>Oído</button>
+  <button data-go="settings"><b>⚙️</b>Ajustes</button>
+</nav>
+<script src="data.js"></script>
+<script>
+'use strict';
+/* =========================================================
+   Estado (se guarda en el teléfono con localStorage)
+   ========================================================= */
+const KEY = 'ingles-jake-v1';
+const DEFAULT = {
+  profile: null,              // respuestas de la encuesta
+  level: null,                // A1..C1
+  skills: { listening: 0, speaking: 0, grammar: 0, vocab: 0 },
+  done: {},                   // lecciones terminadas: id -> % de aciertos
+  convs: {},                  // conversaciones terminadas
+  mistakes: [],               // errores para repasar
+  streak: { last: null, count: 0 },
+  xp: 0,
+  history: [],                // últimas actividades
+  settings: { speed: 'nativo', voice: null, showText: false }
+};
+let S = load();
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(KEY)); if (d) return Object.assign(structuredClone(DEFAULT), d, { settings: Object.assign({}, DEFAULT.settings, d.settings) }); } catch (e) {}
+  return structuredClone(DEFAULT);
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
+
+/* =========================================================
+   Utilidades
+   ========================================================= */
+const $app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+function toast(msg, ms = 2200) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+function today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function touchStreak() {
+  const t = today(); if (S.streak.last === t) return;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const ys = y.getFullYear() + '-' + (y.getMonth() + 1) + '-' + y.getDate();
+  S.streak.count = S.streak.last === ys ? S.streak.count + 1 : 1; S.streak.last = t;
+}
+function updSkill(skill, correct, weight = 0.15) {
+  if (!skill || !(skill in S.skills)) return;
+  S.skills[skill] = Math.round(S.skills[skill] * (1 - weight) + (correct ? 100 : 0) * weight);
+}
+function addXP(n) { S.xp += n; touchStreak(); save(); }
+function addMistake(m) {
+  const key = m.q || m.en;
+  if (S.mistakes.some(x => (x.q || x.en) === key)) return;
+  S.mistakes.unshift(Object.assign({ ts: Date.now() }, m));
+  S.mistakes = S.mistakes.slice(0, 60);
+}
+
+/* =========================================================
+   Voz: hablar (inglés de EE. UU.) y escuchar (reconocimiento)
+   ========================================================= */
+const SPEEDS = { lento: 0.75, normal: 1.0, nativo: 1.2, turbo: 1.45 };
+const SPEED_LABEL = { lento: '🐢 Lento', normal: 'Normal', nativo: '🇺🇸 Nativo', turbo: '⚡ Súper rápido' };
+let voices = [];
+function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
+  voices = speechSynthesis.getVoices().filter(v => /^en[-_]US/i.test(v.lang));
+}
+if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+function bestVoice() {
+  if (S.settings.voice) { const v = voices.find(v => v.voiceURI === S.settings.voice); if (v) return v; }
+  // Preferimos voces naturales/neuronales de EE. UU.
+  const pref = [/natural/i, /online/i, /neural/i, /google us english/i, /aria|jenny|guy|davis|tony|christopher|eric|steffan/i, /samantha|alex/i];
+  for (const p of pref) { const v = voices.find(v => p.test(v.name)); if (v) return v; }
+  return voices[0] || null;
+}
+let speakingEl = null;
+function speak(text, speed) {
+  return new Promise(res => {
+    if (!('speechSynthesis' in window)) { toast('Tu navegador no tiene voz. Usa Chrome o Safari.'); return res(); }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = bestVoice(); if (v) u.voice = v;
+    u.lang = 'en-US';
+    u.rate = SPEEDS[speed || S.settings.speed] || 1;
+    const av = document.querySelectorAll('.avatar.live');
+    av.forEach(a => a.classList.add('talking'));
+    const done = () => { av.forEach(a => a.classList.remove('talking')); res(); };
+    u.onend = done; u.onerror = done;
+    speechSynthesis.speak(u);
+  });
+}
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const canListen = !!SR;
+let rec = null;
+function listen() {
+  return new Promise((res, rej) => {
+    if (!SR) return rej(new Error('nosr'));
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 4;
+    let got = false;
+    rec.onresult = e => { got = true; const alts = []; for (const r of e.results[0]) alts.push(r.transcript); res(alts); };
+    rec.onerror = e => { if (!got) rej(new Error(e.error)); };
+    rec.onend = () => { if (!got) rej(new Error('no-speech')); };
+    try { rec.start(); } catch (e) { rej(e); }
+  });
+}
+function stopListen() { try { rec && rec.stop(); } catch (e) {} }
+
+// Normaliza para comparar lo que dijiste con lo esperado
+const CONTR = { "i'm": 'i am', "you're": 'you are', "he's": 'he is', "she's": 'she is', "it's": 'it is', "we're": 'we are', "they're": 'they are', "i've": 'i have', "you've": 'you have', "we've": 'we have', "i'll": 'i will', "you'll": 'you will', "i'd": 'i would', "don't": 'do not', "doesn't": 'does not', "didn't": 'did not', "can't": 'can not', "cannot": 'can not', "won't": 'will not', "isn't": 'is not', "aren't": 'are not', "haven't": 'have not', "that's": 'that is', "what's": 'what is', "let's": 'let us', "should've": 'should have', "could've": 'could have', "would've": 'would have', "how's": 'how is', "there's": 'there is', 'gonna': 'going to', 'wanna': 'want to', 'gotta': 'got to' };
+function norm(s) {
+  return s.toLowerCase().replace(/[’`]/g, "'").replace(/[^a-z0-9' ]+/g, ' ').split(/\s+/).filter(Boolean)
+    .map(w => CONTR[w] || w).join(' ').split(' ').filter(Boolean);
+}
+function compare(target, said) {
+  const t = norm(target), s = norm(said);
+  // LCS de palabras para saber cuáles dijiste bien
+  const dp = Array.from({ length: t.length + 1 }, () => Array(s.length + 1).fill(0));
+  for (let i = 1; i <= t.length; i++) for (let j = 1; j <= s.length; j++)
+    dp[i][j] = t[i - 1] === s[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  const hit = Array(t.length).fill(false);
+  let i = t.length, j = s.length;
+  while (i > 0 && j > 0) { if (t[i - 1] === s[j - 1]) { hit[i - 1] = true; i--; j--; } else if (dp[i - 1][j] >= dp[i][j - 1]) i--; else j--; }
+  return { score: pct(dp[t.length][s.length], t.length), words: t, hit };
+}
+function bestCompare(target, alts) { return alts.map(a => Object.assign(compare(target, a), { said: a })).sort((a, b) => b.score - a.score)[0]; }
+
+/* =========================================================
+   Componentes pequeños
+   ========================================================= */
+let SAYS = []; // textos para los botones ▶
+function sayBtn(text, label = '▶', speed) { SAYS.push({ text, speed }); return `<button class="say" data-say="${SAYS.length - 1}">${label}</button>`; }
+function jake(en, es, opts = {}) {
+  const hide = opts.hide;
+  return `<div class="jake"><div class="avatar live">J</div><div class="bubble">
+    <div class="en ${hide ? 'hidden-text' : ''}" ${hide ? 'data-reveal title="Toca para ver el texto"' : ''}>${esc(en)}</div>
+    ${es ? `<div class="es ${hide ? 'hidden-text' : ''}" ${hide ? 'data-reveal' : ''}>${esc(es)}</div>` : ''}
+    <div class="row mt wrap">${sayBtn(en, '▶ Escuchar')}${sayBtn(en, '🐢', 'lento')}</div></div></div>`;
+}
+function topBar(progress, backTo = 'home') {
+  return `<div class="top"><button class="back" data-go="${backTo}" aria-label="Salir">✕</button>${progress != null ? `<div class="bar"><i style="width:${progress}%"></i></div>` : '<div class="grow"></div>'}</div>`;
+}
+function speedPicker() {
+  return `<div class="speedsel">${Object.keys(SPEEDS).map(k => `<button data-speed="${k}" class="${S.settings.speed === k ? 'sel' : ''}">${SPEED_LABEL[k]}</button>`).join('')}</div>`;
+}
+function micBlock(id) {
+  if (!canListen) return `<p class="small muted">Tu navegador no reconoce la voz (usa Google Chrome en Android o computadora). Puedes escribir tu respuesta.</p>`;
+  return `<div class="center mt"><button class="mic" id="${id}" aria-label="Hablar">🎤</button><p class="small muted mt" id="${id}-st">Toca y habla en inglés</p></div>`;
+}
+
+/* =========================================================
+   Router
+   ========================================================= */
+let screen = 'home';
+function go(name, arg) {
+  stopListen(); if ('speechSynthesis' in window) speechSynthesis.cancel();
+  SAYS = [];
+  screen = name;
+  const nav = document.getElementById('nav');
+  const showNav = S.level && ['home', 'path', 'talk', 'fast', 'settings', 'review'].includes(name);
+  nav.hidden = !showNav;
+  nav.querySelectorAll('button').forEach(b => b.classList.toggle('act', b.dataset.go === name));
+  (SCREENS[name] || SCREENS.home)(arg);
+  window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-go],[data-say],[data-speed],[data-reveal]');
+  if (!t) return;
+  if (t.dataset.go) { if (t.dataset.go === 'home' && !S.level) return go('welcome'); go(t.dataset.go); }
+  else if (t.dataset.say != null) { const s = SAYS[+t.dataset.say]; if (s) speak(s.text, s.speed); }
+  else if (t.dataset.speed) { S.settings.speed = t.dataset.speed; save(); document.querySelectorAll('[data-speed]').forEach(b => b.classList.toggle('sel', b === t)); speak('This is how fast I talk.'); }
+  else if (t.hasAttribute('data-reveal')) { t.parentElement.querySelectorAll('[data-reveal]').forEach(x => { x.classList.remove('hidden-text'); x.removeAttribute('data-reveal'); }); }
+});
+
+const SCREENS = {};
+
+/* =========================================================
+   Bienvenida + encuesta
+   ========================================================= */
+SCREENS.welcome = () => {
+  $app.innerHTML = `
+  <div class="card hero">
+    <div class="jake"><div class="avatar live" style="background:#c8323c">J</div><div>
+      <h1>Hey! I'm Jake 👋</h1>
+      <p class="muted mb0">Soy de Estados Unidos y voy a ser tu maestro de inglés. Te voy a hablar como hablamos allá: rápido y natural. Pero tranquilo, te explico todo en español, paso por paso.</p>
+    </div></div>
+  </div>
+  <div class="card">
+    <h3>¿Cómo funciona?</h3>
+    <div class="list-item"><span>📝 <b>1. Encuesta corta</b> para conocerte</span></div>
+    <div class="list-item"><span>🎯 <b>2. Examen de nivel</b> (escuchar, hablar, gramática)</span></div>
+    <div class="list-item"><span>🗺️ <b>3. Tu camino</b>: lecciones según lo que necesitas pulir</span></div>
+    <div class="list-item"><span>💬 <b>4. Conversaciones</b> conmigo y entrenamiento de oído rápido</span></div>
+  </div>
+  <div class="card"><p class="small muted mb0">🔊 Sube el volumen. Para hablar conmigo usa Google Chrome y permite el micrófono.</p></div>
+  <button class="btn block red" id="start">Empezar</button>`;
+  document.getElementById('start').onclick = () => { speak("Hey! I'm Jake. Let's get started!"); go('survey'); };
+};
+
+const SURVEY = [
+  { id: 'name', q: '¿Cómo te llamas?', type: 'text', ph: 'Tu nombre' },
+  { id: 'goal', q: '¿Para qué quieres aprender inglés?', type: 'one', options: ['💼 Trabajo', '✈️ Viajar', '🏠 Vivir en EE. UU.', '🎬 Entender series y música', '🎓 Escuela o examen', '🗣️ Platicar con gente'] },
+  { id: 'self', q: '¿Cómo calificas tu inglés hoy?', type: 'one', options: ['No sé nada', 'Sé lo básico (saludos, palabras)', 'Me defiendo en conversaciones simples', 'Hablo bastante bien', 'Casi fluido'] },
+  { id: 'hard', q: '¿Qué se te hace más difícil? (puedes elegir varias)', type: 'many', options: ['Entender cuando hablan rápido', 'Hablar / pronunciar', 'Gramática', 'Vocabulario', 'Me da pena hablar'] },
+  { id: 'time', q: '¿Cuánto tiempo al día puedes practicar?', type: 'one', options: ['5 minutos', '10 minutos', '20 minutos', '30 minutos o más'] }
+];
+let sv = { i: 0, ans: {} };
+SCREENS.survey = () => {
+  const item = SURVEY[sv.i];
+  const cur = sv.ans[item.id];
+  let body = '';
+  if (item.type === 'text') body = `<input type="text" id="sv-in" placeholder="${item.ph}" value="${esc(cur || '')}" autocomplete="given-name">`;
+  else body = item.options.map((o, k) => {
+    const sel = item.type === 'many' ? (cur || []).includes(k) : cur === k;
+    return `<button class="opt ${sel ? 'sel' : ''}" data-k="${k}">${esc(o)}</button>`;
+  }).join('');
+  $app.innerHTML = `${topBar(pct(sv.i, SURVEY.length + 1), 'welcome')}
+  <p class="tag">Encuesta · ${sv.i + 1} de ${SURVEY.length}</p>
+  <div class="card mt"><h2>${esc(item.q)}</h2>${body}</div>
+  <div class="row">${sv.i > 0 ? '<button class="btn ghost" id="sv-back">Atrás</button>' : ''}<button class="btn grow" id="sv-next">Siguiente</button></div>`;
+  $app.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k;
+    if (item.type === 'many') { const a = new Set(sv.ans[item.id] || []); a.has(k) ? a.delete(k) : a.add(k); sv.ans[item.id] = [...a]; }
+    else sv.ans[item.id] = k;
+    SCREENS.survey();
+    if (item.type === 'one') setTimeout(next, 180);
+  });
+  const next = () => {
+    if (item.type === 'text') { const v = document.getElementById('sv-in').value.trim(); if (!v) return toast('Escribe tu nombre 🙂'); sv.ans.name = v; }
+    else if (sv.ans[item.id] == null || (item.type === 'many' && !sv.ans[item.id].length)) return toast('Elige una opción');
+    if (sv.i < SURVEY.length - 1) { sv.i++; SCREENS.survey(); }
+    else { S.profile = sv.ans; save(); go('testIntro'); }
+  };
+  document.getElementById('sv-next').onclick = next;
+  const bk = document.getElementById('sv-back'); if (bk) bk.onclick = () => { sv.i--; SCREENS.survey(); };
+  const inp = document.getElementById('sv-in'); if (inp) { inp.focus(); inp.onkeydown = e => { if (e.key === 'Enter') next(); }; }
+};
+
+/* =========================================================
+   Examen de nivel
+   ========================================================= */
+let PT = null;
+SCREENS.testIntro = () => {
+  const name = S.profile && S.profile.name ? S.profile.name : '';
+  const self = S.profile ? S.profile.self : 2;
+  $app.innerHTML = `${topBar(null, 'welcome')}
+  <div class="card">${jake(`Nice to meet you, ${name}! Now let's see where you're at.`, `¡Mucho gusto, ${name}! Ahora veamos en qué nivel estás.`)}</div>
+  <div class="card">
+    <h2>Examen de nivel</h2>
+    <p>Son preguntas de varios tipos, de fácil a difícil:</p>
+    <div class="list-item">🧠 Gramática y vocabulario</div>
+    <div class="list-item">👂 Escuchar audios (algunos a velocidad nativa)</div>
+    <div class="list-item">🗣️ Repetir frases en voz alta</div>
+    <p class="small muted mt">No pasa nada si no sabes algo: elige <b>"No sé"</b>. Así sé exactamente qué enseñarte.</p>
+  </div>
+  <button class="btn block red" id="go">Comenzar examen</button>`;
+  document.getElementById('go').onclick = () => {
+    // Si dice que no sabe nada, el examen se corta antes cuando falla mucho
+    PT = { i: 0, res: [], startLevel: self };
+    go('test');
+  };
+};
+SCREENS.test = () => {
+  const q = PLACEMENT[PT.i];
+  const prog = pct(PT.i, PLACEMENT.length);
+  let html = `${topBar(prog, 'welcome')}<p class="tag">${q.level} · ${SKILL_NAMES[q.skill]}</p>`;
+  if (q.type === 'mc' || q.type === 'listen') {
+    const order = shuffle(q.options.map((o, k) => k));
+    html += `<div class="card mt">`;
+    if (q.type === 'listen') html += `<div class="center"><button class="btn red" id="play">▶ Escuchar audio</button><p class="small muted mt">Velocidad: ${SPEED_LABEL[q.speed]}. Puedes repetirlo.</p></div>`;
+    html += `<h2 class="mt">${esc(q.q)}</h2>${order.map(k => `<button class="opt" data-k="${k}">${esc(q.options[k])}</button>`).join('')}
+      <button class="opt" data-k="-1" style="color:var(--muted)">🤷 No sé</button></div>`;
+    $app.innerHTML = html;
+    if (q.type === 'listen') { const p = document.getElementById('play'); p.onclick = () => speak(q.text, q.speed); setTimeout(() => speak(q.text, q.speed), 350); }
+    $app.querySelectorAll('.opt').forEach(b => b.onclick = () => recordTest(+b.dataset.k === q.a));
+  } else {
+    html += `<div class="card mt"><h2>Repite esta frase en voz alta</h2>
+      <p class="en" style="font-size:1.25rem">${esc(q.text)}</p><p class="es">${esc(q.es)}</p>
+      <div class="row">${sayBtn(q.text, '▶ Escuchar', 'normal')}</div>
+      ${micBlock('tmic')}<div id="tres"></div></div>
+      <button class="btn block ghost" id="skip">${canListen ? 'No puedo hablar ahora (saltar)' : 'Continuar'}</button>`;
+    $app.innerHTML = html;
+    document.getElementById('skip').onclick = () => recordTest(null);
+    const m = document.getElementById('tmic');
+    if (m) m.onclick = async () => {
+      m.classList.add('on'); document.getElementById('tmic-st').textContent = 'Escuchando...';
+      try {
+        const alts = await listen(); const r = bestCompare(q.text, alts);
+        m.classList.remove('on');
+        document.getElementById('tres').innerHTML = speakResult(r) + `<button class="btn block mt" id="tnext">Siguiente</button>`;
+        document.getElementById('tnext').onclick = () => recordTest(r.score >= 70, r.score);
+      } catch (e) { m.classList.remove('on'); micError(e, 'tmic-st'); }
+    };
+  }
+};
+function recordTest(ok, score) {
+  const q = PLACEMENT[PT.i];
+  PT.res.push({ level: q.level, skill: q.skill, ok, score });
+  PT.i++;
+  // Corte temprano: si ya falló casi todo de dos niveles seguidos, no lo torturamos
+  const lvlIdx = LEVELS.indexOf(q.level);
+  const nextQ = PLACEMENT[PT.i];
+  if (nextQ && nextQ.level !== q.level && lvlIdx >= 1) {
+    const last2 = PT.res.filter(r => r.ok !== null && (r.level === LEVELS[lvlIdx] || r.level === LEVELS[lvlIdx - 1]));
+    if (last2.length >= 5 && pct(last2.filter(r => r.ok).length, last2.length) < 30) PT.i = PLACEMENT.length;
+  }
+  if (PT.i >= PLACEMENT.length) finishTest(); else SCREENS.test();
+}
+function finishTest() {
+  const res = PT.res;
+  // Nivel: el más alto en el que acertaste al menos 60% (contando niveles anteriores con 50%)
+  let level = 'A1';
+  for (let k = 0; k < LEVELS.length; k++) {
+    const r = res.filter(x => x.level === LEVELS[k] && x.ok !== null);
+    if (!r.length) break;
+    const acc = pct(r.filter(x => x.ok).length, r.length);
+    if (acc >= 60) level = LEVELS[k]; else break;
+  }
+  // Si casi no acertó nada en A1, igual empieza en A1
+  const skills = {};
+  for (const sk of Object.keys(S.skills)) {
+    const r = res.filter(x => x.skill === sk && x.ok !== null);
+    if (sk === 'speaking' && r.length) skills[sk] = Math.round(r.reduce((a, x) => a + (x.score || 0), 0) / r.length);
+    else skills[sk] = r.length ? pct(r.filter(x => x.ok).length, r.length) : 30;
+  }
+  // Lo que dijo en la encuesta que se le dificulta pesa un poco
+  const hard = (S.profile && S.profile.hard) || [];
+  const map = { 0: 'listening', 1: 'speaking', 2: 'grammar', 3: 'vocab' };
+  hard.forEach(h => { if (map[h]) skills[map[h]] = Math.max(0, skills[map[h]] - 8); });
+  S.level = level; S.skills = skills;
+  S.testResults = { date: Date.now(), level, skills: Object.assign({}, skills) };
+  touchStreak(); save();
+  go('results');
+}
+
+SCREENS.results = () => {
+  const lv = S.level;
+  const weak = Object.entries(S.skills).sort((a, b) => a[1] - b[1]);
+  const name = S.profile && S.profile.name || '';
+  const advice = {
+    listening: 'Vamos a entrenar tu oído con audios a velocidad nativa y reducciones (gonna, wanna, gotta).',
+    speaking: 'Vamos a practicar hablar en voz alta conmigo para que pierdas el miedo y mejores tu pronunciación.',
+    grammar: 'Vamos a reforzar la estructura de las frases para que hables correcto sin pensar tanto.',
+    vocab: 'Vamos a aprender las palabras y expresiones que los estadounidenses usan todos los días.'
+  };
+  $app.innerHTML = `
+  <div class="card hero center">
+    <p class="muted mb0">Tu nivel de inglés</p>
+    <div class="big">${lv}</div>
+    <h2 style="color:#fff">${LEVEL_NAMES[lv]}</h2>
+    <p class="muted mb0">Escala internacional (A1 principiante → C1 avanzado)</p>
+  </div>
+  <div class="card">${jake(`Alright ${name}, good job! Here's what we're gonna work on.`, `¡Muy bien ${name}! Esto es lo que vamos a trabajar.`)}</div>
+  <div class="card"><h3>Tus habilidades</h3>${skillBars()}</div>
+  <div class="card"><h3>🎯 Lo que vamos a pulir primero</h3>
+    ${weak.slice(0, 2).map(([k]) => `<p><b>${SKILL_NAMES[k]}:</b> ${advice[k]}</p>`).join('')}
+    <p class="small muted mb0">Conforme avances, voy ajustando tu camino según tus errores y aciertos.</p></div>
+  <button class="btn block red" data-go="home">Ver mi camino</button>`;
+  setTimeout(() => speak(`Alright ${name}, good job! Here's what we're gonna work on.`), 300);
+};
+function skillBars() {
+  return Object.entries(S.skills).map(([k, v]) => {
+    const c = v < 40 ? 'red' : v < 70 ? 'amber' : 'green';
+    return `<div class="mt"><div class="row"><span class="grow small"><b>${SKILL_NAMES[k]}</b></span><span class="small">${v}%</span></div><div class="bar ${c}"><i style="width:${v}%"></i></div></div>`;
+  }).join('');
+}
+
+/* =========================================================
+   Inicio: lo que sigue según tu nivel y tus puntos débiles
+   ========================================================= */
+function nextLesson() {
+  const order = LESSONS.filter(l => LEVELS.indexOf(l.level) >= LEVELS.indexOf(S.level));
+  return order.find(l => !(l.id in S.done)) || LESSONS.find(l => !(l.id in S.done)) || null;
+}
+function weakest() { return Object.entries(S.skills).sort((a, b) => a[1] - b[1])[0]; }
+function maybeLevelUp() {
+  const idx = LEVELS.indexOf(S.level);
+  const mine = LESSONS.filter(l => l.level === S.level);
+  if (idx < LEVELS.length - 1 && mine.length && mine.every(l => (S.done[l.id] || 0) >= 60)) {
+    S.level = LEVELS[idx + 1]; save();
+    return true;
+  }
+  return false;
+}
+SCREENS.home = () => {
+  if (!S.level) return go('welcome');
+  const name = S.profile && S.profile.name || '';
+  const nl = nextLesson();
+  const [wk, wv] = weakest();
+  const lvlLessons = LESSONS.filter(l => l.level === S.level);
+  const doneLvl = lvlLessons.filter(l => l.id in S.done).length;
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 19 ? 'Hey' : 'Good evening';
+  const polish = {
+    listening: { t: 'Entrena tu oído', d: 'Frases a velocidad nativa con reducciones.', go: 'fast', b: '⚡ Oído nativo' },
+    speaking: { t: 'Habla conmigo', d: 'Una conversación real para soltarte.', go: 'talk', b: '💬 Conversar' },
+    grammar: { t: 'Repasa tus errores', d: 'Vuelve a practicar lo que fallaste.', go: S.mistakes.length ? 'review' : 'path', b: '🔁 Repasar' },
+    vocab: { t: 'Repasa tus errores', d: 'Vocabulario y expresiones que fallaste.', go: S.mistakes.length ? 'review' : 'path', b: '🔁 Repasar' }
+  }[wk];
+  $app.innerHTML = `
+  <div class="card hero">
+    <div class="row"><div class="grow"><p class="muted mb0">${greet}, ${esc(name)}!</p><h2 style="color:#fff;margin:2px 0 0">Nivel ${S.level} · ${LEVEL_NAMES[S.level]}</h2></div>
+    <div class="center"><div style="font-size:1.6rem">🔥 ${S.streak.count}</div><div class="small muted">días</div></div></div>
+    <div class="bar mt" style="background:rgba(255,255,255,.2)"><i style="width:${pct(doneLvl, lvlLessons.length)}%;background:#fff"></i></div>
+    <p class="small muted mb0 mt">${doneLvl} de ${lvlLessons.length} lecciones de ${S.level} · ${S.xp} XP</p>
+  </div>
+  ${nl ? `<div class="card"><p class="tag red">Lección de hoy</p>
+    <h2 class="mt">${esc(nl.title)}</h2><p class="muted">${esc(nl.goal)}</p>
+    <button class="btn block" id="go-lesson">Empezar lección</button></div>`
+    : `<div class="card"><h2>🏆 ¡Terminaste todas las lecciones!</h2><p>Sigue con conversaciones y el oído nativo para mantenerte.</p></div>`}
+  <div class="card"><p class="tag amber">Para pulir · ${SKILL_NAMES[wk]} ${wv}%</p>
+    <h3 class="mt">${polish.t}</h3><p class="muted">${polish.d}</p>
+    <button class="btn block ghost" data-go="${polish.go}">${polish.b}</button></div>
+  <div class="grid2">
+    <button class="card btn ghost" style="flex-direction:column;height:auto;padding:16px" data-go="talk"><span style="font-size:1.6rem">💬</span>Conversar</button>
+    <button class="card btn ghost" style="flex-direction:column;height:auto;padding:16px" data-go="review"><span style="font-size:1.6rem">🔁</span>Repaso (${S.mistakes.length})</button>
+  </div>
+  <div class="card"><h3>Tu progreso</h3>${skillBars()}</div>`;
+  const gl = document.getElementById('go-lesson'); if (gl) gl.onclick = () => startLesson(nl.id);
+};
+
+/* =========================================================
+   Camino de lecciones
+   ========================================================= */
+SCREENS.path = () => {
+  const myIdx = LEVELS.indexOf(S.level);
+  $app.innerHTML = `<h1>Tus lecciones</h1><p class="muted">Empiezan en tu nivel. Puedes repasar niveles anteriores cuando quieras.</p>` +
+    LEVELS.map((lv, k) => {
+      const ls = LESSONS.filter(l => l.level === lv);
+      const locked = k > myIdx + 1;
+      return `<div class="card"><div class="row"><h2 class="grow mb0">${lv} · ${LEVEL_NAMES[lv]}</h2>${k === myIdx ? '<span class="tag red">Tu nivel</span>' : ''}${locked ? '<span class="tag">🔒</span>' : ''}</div>
+      ${ls.map((l, n) => {
+        const done = l.id in S.done;
+        return `<button class="lesson-row ${done ? 'done' : ''} ${locked ? 'locked' : ''}" data-lesson="${l.id}" ${locked ? 'disabled' : ''}>
+          <span class="dot">${done ? '✓' : n + 1}</span><span class="grow"><b>${esc(l.title)}</b><br><span class="small muted">${SKILL_NAMES[l.focus]}${done ? ' · ' + S.done[l.id] + '%' : ''}</span></span><span>›</span></button>`;
+      }).join('')}
+      ${locked ? '<p class="small muted mb0">Se desbloquea al terminar el nivel anterior.</p>' : ''}</div>`;
+    }).join('');
+  $app.querySelectorAll('[data-lesson]').forEach(b => b.onclick = () => startLesson(b.dataset.lesson));
+};
+
+/* =========================================================
+   Lección paso a paso
+   ========================================================= */
+let L = null;
+const STEPS = ['intro', 'vocab', 'explain', 'listen', 'speak', 'quiz', 'summary'];
+const STEP_NAME = { intro: '¿Qué vamos a aprender?', vocab: 'Palabras clave', explain: 'Explicación', listen: 'Escucha a un nativo', speak: 'Tu turno: habla', quiz: 'Practica', summary: 'Resumen' };
+function startLesson(id) {
+  const lesson = LESSONS.find(l => l.id === id);
+  L = { lesson, step: 0, ok: 0, total: 0, qi: 0, si: 0, quiz: shuffle(lesson.quiz), missed: [] };
+  go('lesson');
+}
+function lessonNext() { L.step++; go('lesson'); }
+SCREENS.lesson = () => {
+  const l = L.lesson, st = STEPS[L.step];
+  const prog = pct(L.step, STEPS.length - 1);
+  let h = `${topBar(prog, 'path')}<p class="tag">${l.level} · Paso ${Math.min(L.step + 1, STEPS.length)} de ${STEPS.length} · ${STEP_NAME[st]}</p>`;
+  if (st === 'intro') {
+    h += `<div class="card mt"><h1>${esc(l.title)}</h1>
+      <h3 class="mt">🎯 ¿Qué vamos a aprender?</h3><p>${esc(l.goal)}</p>
+      <h3>💡 ¿Por qué importa?</h3><p class="mb0">${esc(l.why)}</p></div>
+      <div class="card">${jake(l.intro.en, l.intro.es, { hide: true })}<p class="small muted mt mb0">Primero escucha. Toca el texto borroso solo si no entendiste.</p></div>
+      <button class="btn block" id="nx">Vamos</button>`;
+    $app.innerHTML = h; setTimeout(() => speak(l.intro.en), 350);
+  } else if (st === 'vocab') {
+    h += `<div class="card mt"><h2>Palabras y frases clave</h2><p class="muted small">Toca ▶ para escuchar cada una.</p>
+      ${l.vocab.map(([en, es]) => `<div class="list-item"><div><div class="en">${esc(en)}</div><div class="es">${esc(es)}</div></div>${sayBtn(en.split(' / ')[0].replace(/\s*\(.*\)/, ''))}</div>`).join('')}</div>
+      <button class="btn block" id="nx">Entendido</button>`;
+    $app.innerHTML = h;
+  } else if (st === 'explain') {
+    h += `<div class="card mt explain"><h2>Te explico</h2>${l.explain}</div>
+      <div class="card"><h3>Ejemplos</h3>${l.examples.map(([en, es]) => `<div class="list-item"><div><div class="en">${esc(en)}</div><div class="es">${esc(es)}</div></div><div class="row">${sayBtn(en)}${sayBtn(en, '⚡', 'turbo')}</div></div>`).join('')}
+      <p class="small muted mt mb0">⚡ = cómo sonaría súper rápido.</p></div>
+      <button class="btn block" id="nx">Siguiente</button>`;
+    $app.innerHTML = h;
+  } else if (st === 'listen') {
+    const q = l.listen; const order = shuffle(q.options.map((o, k) => k));
+    h += `<div class="card mt"><h2>Escucha a velocidad nativa</h2>
+      <div class="row wrap">${sayBtn(q.text, '▶ Nativo', 'nativo')}${sayBtn(q.text, '⚡ Más rápido', 'turbo')}${sayBtn(q.text, '🐢 Lento', 'lento')}</div>
+      <h3 class="mt">${esc(q.q)}</h3>${order.map(k => `<button class="opt" data-k="${k}">${esc(q.options[k])}</button>`).join('')}<div id="fb"></div></div>`;
+    $app.innerHTML = h; setTimeout(() => speak(q.text, 'nativo'), 350);
+    mcHandler(q.a, ok => {
+      L.total++; if (ok) L.ok++; updSkill('listening', ok);
+      if (!ok) { L.missed.push(q.text); addMistake({ type: 'mc', skill: 'listening', q: '🎧 ' + q.q, audio: q.text, options: q.options, a: q.a, why: q.note }); }
+      document.getElementById('fb').innerHTML = `<div class="tip mt"><p class="en mb0">"${esc(q.text)}"</p><p class="small mb0 mt">${esc(q.note)}</p></div><button class="btn block mt" id="nx">Continuar</button>`;
+      document.getElementById('nx').onclick = lessonNext; save();
+    });
+    return;
+  } else if (st === 'speak') {
+    const phrase = l.speak[L.si];
+    h += `<div class="card mt"><h2>Repite en voz alta (${L.si + 1}/${l.speak.length})</h2>
+      <p class="en" style="font-size:1.3rem">${esc(phrase)}</p>
+      <div class="row">${sayBtn(phrase, '▶ Escuchar', 'normal')}${sayBtn(phrase, '🇺🇸 Nativo', 'nativo')}</div>
+      ${micBlock('lmic')}<div id="sres"></div></div>
+      <button class="btn block ghost" id="sskip">${canListen ? 'Saltar esta frase' : 'Ya lo dije en voz alta ✓'}</button>`;
+    $app.innerHTML = h;
+    const advance = () => { if (L.si < l.speak.length - 1) { L.si++; go('lesson'); } else lessonNext(); };
+    document.getElementById('sskip').onclick = advance;
+    const m = document.getElementById('lmic');
+    if (m) m.onclick = async () => {
+      m.classList.add('on'); document.getElementById('lmic-st').textContent = 'Escuchando...';
+      try {
+        const alts = await listen(); m.classList.remove('on'); document.getElementById('lmic-st').textContent = 'Toca para intentar otra vez';
+        const r = bestCompare(phrase, alts); const ok = r.score >= 75;
+        L.total++; if (ok) L.ok++; updSkill('speaking', ok, 0.2);
+        if (!ok) addMistake({ type: 'speak', skill: 'speaking', en: phrase });
+        save();
+        document.getElementById('sres').innerHTML = speakResult(r) + `<button class="btn block mt" id="snext">Siguiente</button>`;
+        document.getElementById('snext').onclick = advance;
+      } catch (e) { m.classList.remove('on'); micError(e, 'lmic-st'); }
+    };
+    setTimeout(() => speak(phrase, 'normal'), 350);
+    return;
+  } else if (st === 'quiz') {
+    const q = L.quiz[L.qi]; const order = shuffle(q.options.map((o, k) => k));
+    h += `<div class="card mt"><p class="small muted">Pregunta ${L.qi + 1} de ${L.quiz.length}</p><h2>${esc(q.q)}</h2>
+      ${order.map(k => `<button class="opt" data-k="${k}">${esc(q.options[k])}</button>`).join('')}<div id="fb"></div></div>`;
+    $app.innerHTML = h;
+    mcHandler(q.a, ok => {
+      L.total++; if (ok) L.ok++; updSkill(l.focus === 'vocab' ? 'vocab' : 'grammar', ok);
+      if (!ok) { L.missed.push(q.q); addMistake({ type: 'mc', skill: l.focus === 'vocab' ? 'vocab' : 'grammar', q: q.q, options: q.options, a: q.a, why: q.why }); }
+      save();
+      document.getElementById('fb').innerHTML = `<div class="tip mt">${ok ? '✅ ¡Correcto! ' : '❌ '}${esc(q.why)}</div><button class="btn block mt" id="nx">Continuar</button>`;
+      document.getElementById('nx').onclick = () => { if (L.qi < L.quiz.length - 1) { L.qi++; go('lesson'); } else lessonNext(); };
+      if (ok) speak(['Nice!', 'Awesome!', 'You got it!', 'Nailed it!'][Math.floor(Math.random() * 4)], 'normal');
+    });
+    return;
+  } else if (st === 'summary') {
+    const score = pct(L.ok, L.total);
+    const prev = S.done[l.id] || 0;
+    S.done[l.id] = Math.max(prev, score);
+    addXP(10 + Math.round(score / 10));
+    S.history.unshift({ t: Date.now(), what: l.title, score }); S.history = S.history.slice(0, 30);
+    const up = maybeLevelUp(); save();
+    const msg = score >= 80 ? "Dude, you crushed it!" : score >= 60 ? 'Good job, keep it up!' : "No worries, practice makes perfect.";
+    h += `<div class="card mt center"><div class="big">${score}%</div><p class="muted">de aciertos</p>
+      ${up ? `<p class="tag green">🎉 ¡Subiste al nivel ${S.level}!</p>` : ''}</div>
+      <div class="card">${jake(msg, score >= 80 ? '¡Lo hiciste increíble!' : score >= 60 ? '¡Buen trabajo, sigue así!' : 'No te preocupes, la práctica hace al maestro.')}</div>
+      <div class="card"><h3>✅ Lo que aprendiste</h3><p>${esc(l.goal)}</p>
+      ${L.missed.length ? `<h3>🔁 Agregué a tu repaso</h3><p class="small muted mb0">${L.missed.length} cosa(s) que fallaste. Las vamos a practicar en "Repaso".</p>` : '<p class="mb0">No fallaste nada. 🔥</p>'}</div>
+      <button class="btn block" data-go="home">Continuar</button>`;
+    $app.innerHTML = h; setTimeout(() => speak(msg), 300);
+    return;
+  }
+  const nx = document.getElementById('nx'); if (nx) nx.onclick = lessonNext;
+};
+function mcHandler(answer, cb) {
+  const opts = $app.querySelectorAll('.opt');
+  opts.forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, ok = k === answer;
+    opts.forEach(o => { o.disabled = true; if (+o.dataset.k === answer) o.classList.add('ok'); });
+    if (!ok) b.classList.add('bad');
+    cb(ok);
+  });
+}
+function speakResult(r) {
+  const words = r.words.map((w, i) => `<span class="${r.hit[i] ? 'w-ok' : 'w-bad'}">${esc(w)}</span>`).join(' ');
+  const c = r.score >= 85 ? 'green' : r.score >= 60 ? 'amber' : 'red';
+  const msg = r.score >= 85 ? '¡Excelente pronunciación!' : r.score >= 60 ? '¡Casi! Revisa las palabras en rojo.' : 'Escúchalo otra vez y repite despacio.';
+  return `<div class="mt"><div class="row"><span class="tag ${c}">${r.score}%</span><span class="small">${msg}</span></div>
+    <p class="small mt mb0"><b>Entendí:</b> "${esc(r.said)}"</p><p class="mt mb0">${words}</p></div>`;
+}
+function micError(e, stId) {
+  const el = document.getElementById(stId);
+  const m = e.message;
+  if (el) el.textContent = m === 'not-allowed' ? 'Permite el micrófono en tu navegador 🎤' : m === 'network' ? 'Necesitas internet para reconocer tu voz.' : 'No te escuché. Toca y habla otra vez.';
+}
+
+/* =========================================================
+   Conversaciones con Jake
+   ========================================================= */
+SCREENS.talk = () => {
+  const myIdx = LEVELS.indexOf(S.level);
+  $app.innerHTML = `<h1>Habla con Jake</h1><p class="muted">Conversaciones reales. Jake habla a velocidad nativa; tú respondes con tu voz o escribiendo.</p>
+    <div class="card"><h3>Velocidad de Jake</h3>${speedPicker()}
+      <label class="row mt small"><input type="checkbox" id="st" ${S.settings.showText ? 'checked' : ''}> Mostrar el texto de lo que dice (más fácil)</label></div>
+    ${CONVERSATIONS.map(c => {
+      const k = LEVELS.indexOf(c.level); const rec = k <= myIdx + 1;
+      return `<button class="lesson-row ${c.id in S.convs ? 'done' : ''}" data-conv="${c.id}"><span class="dot" style="font-size:1.2rem">${c.id in S.convs ? '✓' : c.icon}</span>
+      <span class="grow"><b>${esc(c.title)}</b><br><span class="small muted">${c.level}${!rec ? ' · un poco difícil para ti' : ''}${c.id in S.convs ? ' · ' + S.convs[c.id] + '%' : ''}</span></span><span>›</span></button>`;
+    }).join('')}`;
+  document.getElementById('st').onchange = e => { S.settings.showText = e.target.checked; save(); };
+  $app.querySelectorAll('[data-conv]').forEach(b => b.onclick = () => startConv(b.dataset.conv));
+};
+let C = null;
+function startConv(id) { C = { c: CONVERSATIONS.find(x => x.id === id), i: 0, log: [], ok: 0, waiting: true }; go('conv'); }
+SCREENS.conv = () => renderConv(true);
+function renderConv(speakNow) {
+  const c = C.c, turn = c.turns[C.i];
+  const finished = C.i >= c.turns.length;
+  const hide = !S.settings.showText;
+  let chat = C.log.map(m => {
+    if (m.who === 'jake') return `<div class="jake"><div class="avatar">J</div><div class="bubble"><div class="en">${esc(m.en)}</div>${m.es ? `<div class="es">${esc(m.es)}</div>` : ''}</div></div>`;
+    if (m.who === 'me') return `<div class="bubble me">${esc(m.text)}</div>`;
+    return `<div class="bubble coach small">${m.html}</div>`;
+  }).join('');
+  let bottom = '';
+  if (!finished) {
+    chat += jake(turn.en, turn.es, { hide });
+    bottom = `<div class="card">
+      ${micBlock('cmic')}
+      <div class="row mt"><input type="text" id="ctext" placeholder="O escribe tu respuesta en inglés..." autocomplete="off"><button class="btn sm" id="csend">Enviar</button></div>
+      <div class="row mt wrap"><button class="btn plain sm" id="chelp">💡 Ayúdame a responder</button><button class="btn plain sm" id="cwhat">❓ ¿Qué dijo?</button></div>
+      <div id="chelpbox"></div></div>`;
+  } else {
+    const score = pct(C.ok, c.turns.length);
+    S.convs[c.id] = Math.max(S.convs[c.id] || 0, score); addXP(15); save();
+    bottom = `<div class="card center"><h2>🎉 ¡Conversación terminada!</h2><p class="big">${score}%</p><p class="muted">respuestas naturales</p>
+      <div class="row"><button class="btn ghost grow" id="again">Repetir</button><button class="btn grow" data-go="talk">Otra conversación</button></div></div>`;
+  }
+  $app.innerHTML = `${topBar(pct(C.i, c.turns.length), 'talk')}
+    <div class="card"><p class="tag">${c.level} · ${esc(c.title)}</p><p class="small mt mb0">${esc(c.setup)}</p></div>
+    <div class="chat">${chat}</div>${bottom}`;
+  if (finished) { document.getElementById('again').onclick = () => startConv(c.id); window.scrollTo(0, document.body.scrollHeight); return; }
+  window.scrollTo(0, document.body.scrollHeight);
+  if (speakNow) setTimeout(() => speak(turn.en), 300);
+  const submit = text => handleConvAnswer(text);
+  document.getElementById('csend').onclick = () => { const v = document.getElementById('ctext').value.trim(); if (v) submit(v); };
+  document.getElementById('ctext').onkeydown = e => { if (e.key === 'Enter') { const v = e.target.value.trim(); if (v) submit(v); } };
+  document.getElementById('chelp').onclick = () => {
+    document.getElementById('chelpbox').innerHTML = `<div class="tip mt"><p class="small mb0">${esc(turn.tip)}</p><p class="en mt mb0">Ejemplo: "${esc(turn.model)}"</p><div class="mt">${sayBtn(turn.model.split(' / ')[0], '▶ Escuchar ejemplo', 'normal')}</div></div>`;
+  };
+  document.getElementById('cwhat').onclick = () => {
+    $app.querySelectorAll('[data-reveal]').forEach(x => { x.classList.remove('hidden-text'); x.removeAttribute('data-reveal'); });
+    speak(turn.en, 'lento');
+  };
+  const m = document.getElementById('cmic');
+  if (m) m.onclick = async () => {
+    m.classList.add('on'); document.getElementById('cmic-st').textContent = 'Escuchando...';
+    try { const alts = await listen(); m.classList.remove('on'); submit(alts[0]); }
+    catch (e) { m.classList.remove('on'); micError(e, 'cmic-st'); }
+  };
+}
+function handleConvAnswer(text) {
+  const turn = C.c.turns[C.i];
+  const low = ' ' + norm(text).join(' ') + ' ';
+  const lowRaw = ' ' + text.toLowerCase().replace(/[’`]/g, "'") + ' ';
+  const ok = turn.expect.every(group => group.some(k => lowRaw.includes(k) || low.includes(' ' + norm(k).join(' '))));
+  const longEnough = norm(text).length >= 1;
+  C.log.push({ who: 'jake', en: turn.en, es: turn.es });
+  C.log.push({ who: 'me', text });
+  updSkill('speaking', ok, 0.12);
+  if (ok && longEnough) {
+    C.ok++;
+    C.log.push({ who: 'jake', en: turn.ok });
+    C.i++; save();
+    speak(turn.ok).then(() => { if (screen === 'conv') renderConv(true); });
+    renderConv(false);
+  } else {
+    addMistake({ type: 'speak', skill: 'speaking', en: turn.model.split(' / ')[0] });
+    C.log.push({ who: 'coach', html: `<b>🧑‍🏫 Tip:</b> ${esc(turn.tip)}<br>Una respuesta natural sería: <b>"${esc(turn.model)}"</b>` });
+    C.i++; save();
+    renderConv(false);
+    speak(turn.model.split(' / ')[0], 'normal').then(() => { if (screen === 'conv') setTimeout(() => renderConv(true), 600); });
+  }
+}
+
+/* =========================================================
+   Oído nativo: inglés súper rápido
+   ========================================================= */
+let F = null;
+SCREENS.fast = () => {
+  $app.innerHTML = `<h1>⚡ Oído nativo</h1><p class="muted">Así hablan en EE. UU. cuando van rápido: las palabras se pegan. Escucha y elige qué dijeron de verdad.</p>
+  <div class="card"><h3>Guía rápida</h3>
+    <table class="tbl"><tr><th>Suena</th><th>Significa</th></tr>
+    <tr><td><b>gonna</b></td><td>going to</td></tr><tr><td><b>wanna</b></td><td>want to</td></tr><tr><td><b>gotta / hafta</b></td><td>have got to / have to</td></tr>
+    <tr><td><b>lemme / gimme</b></td><td>let me / give me</td></tr><tr><td><b>whatcha / didja</b></td><td>what are you / did you</td></tr>
+    <tr><td><b>kinda / outta / lotta</b></td><td>kind of / out of / lot of</td></tr><tr><td><b>shoulda / coulda</b></td><td>should have / could have</td></tr><tr><td><b>dunno</b></td><td>don't know</td></tr></table></div>
+  <div class="card"><h3>Velocidad</h3>${speedPicker()}<p class="small muted mt mb0">Recomendado: ⚡ Súper rápido para retarte.</p></div>
+  <button class="btn block red" id="fgo">Empezar entrenamiento (6 frases)</button>`;
+  document.getElementById('fgo').onclick = () => { F = { items: shuffle(FAST_DRILLS).slice(0, 6), i: 0, ok: 0 }; go('fastRun'); };
+};
+SCREENS.fastRun = () => {
+  if (F.i >= F.items.length) {
+    const sc = pct(F.ok, F.items.length); addXP(8); save();
+    $app.innerHTML = `${topBar(100, 'fast')}<div class="card center"><h2>Entrenamiento terminado</h2><div class="big">${F.ok}/${F.items.length}</div><p class="muted">${sc >= 80 ? '¡Tu oído ya está agarrando el ritmo nativo!' : 'Sigue practicando; en unos días notarás la diferencia.'}</p>
+      <div class="row"><button class="btn ghost grow" data-go="fast">Otra vez</button><button class="btn grow" data-go="home">Inicio</button></div></div>`;
+    return;
+  }
+  const it = F.items[F.i];
+  const distract = shuffle(FAST_DRILLS.filter(x => x !== it)).slice(0, 2).map(x => x.full);
+  const opts = shuffle([it.full, ...distract]);
+  const speed = S.settings.speed === 'lento' || S.settings.speed === 'normal' ? 'nativo' : S.settings.speed;
+  $app.innerHTML = `${topBar(pct(F.i, F.items.length), 'fast')}
+    <div class="card"><div class="center"><div class="avatar live" style="margin:0 auto 10px;width:64px;height:64px;font-size:1.5rem">J</div>
+      <div class="row" style="justify-content:center">${sayBtn(it.fast, '▶ Escuchar', speed)}${sayBtn(it.fast, '🐢 Lento', 'lento')}</div></div>
+      <h3 class="mt">¿Qué dijo Jake?</h3>${opts.map(o => `<button class="opt" data-k="${o === it.full ? 1 : 0}">${esc(o)}</button>`).join('')}<div id="fb"></div></div>`;
+  setTimeout(() => speak(it.fast, speed), 350);
+  const optEls = $app.querySelectorAll('.opt');
+  optEls.forEach(b => b.onclick = () => {
+    const ok = b.dataset.k === '1';
+    optEls.forEach(o => { o.disabled = true; if (o.dataset.k === '1') o.classList.add('ok'); });
+    if (!ok) { b.classList.add('bad'); addMistake({ type: 'mc', skill: 'listening', q: '🎧 ¿Qué dijo Jake?', audio: it.fast, options: [it.full, ...distract], a: 0, why: it.red.join(' · ') }); }
+    else F.ok++;
+    updSkill('listening', ok); save();
+    document.getElementById('fb').innerHTML = `<div class="tip mt"><p class="mb0"><b>Cómo suena:</b> "${esc(it.fast)}"</p><p class="small mt mb0">${it.red.map(esc).join('<br>')}</p><p class="es mt mb0">${esc(it.es)}</p></div>
+      <button class="btn block mt" id="fnx">Siguiente</button>`;
+    document.getElementById('fnx').onclick = () => { F.i++; go('fastRun'); };
+  });
+};
+
+/* =========================================================
+   Repaso de errores
+   ========================================================= */
+let R = null;
+SCREENS.review = () => {
+  if (!S.mistakes.length) {
+    $app.innerHTML = `<h1>🔁 Repaso</h1><div class="card center"><p style="font-size:2rem">🎉</p><h3>No tienes errores pendientes</h3><p class="muted">Cuando falles algo en una lección, conversación u oído nativo, aparecerá aquí para practicarlo otra vez.</p><button class="btn" data-go="path">Ir a lecciones</button></div>`;
+    return;
+  }
+  $app.innerHTML = `<h1>🔁 Repaso</h1><p class="muted">Lo que fallaste antes. Si lo aciertas, sale de la lista.</p>
+    <div class="card"><p><b>${S.mistakes.length}</b> pendiente(s)</p><button class="btn block red" id="rgo">Repasar ahora</button></div>
+    <div class="card">${S.mistakes.slice(0, 15).map(m => `<div class="list-item"><span class="small">${esc(m.q || m.en)}</span><span class="tag">${SKILL_NAMES[m.skill] || ''}</span></div>`).join('')}</div>`;
+  document.getElementById('rgo').onclick = () => { R = { items: S.mistakes.slice(0, 8), i: 0, ok: 0 }; go('reviewRun'); };
+};
+SCREENS.reviewRun = () => {
+  if (R.i >= R.items.length) {
+    addXP(8); save();
+    $app.innerHTML = `${topBar(100, 'review')}<div class="card center"><h2>Repaso terminado</h2><div class="big">${R.ok}/${R.items.length}</div><p class="muted">Te quedan ${S.mistakes.length} por repasar.</p><button class="btn block" data-go="home">Inicio</button></div>`;
+    return;
+  }
+  const m = R.items[R.i];
+  const resolve = ok => {
+    if (ok) { R.ok++; S.mistakes = S.mistakes.filter(x => x !== m); }
+    updSkill(m.skill, ok); save();
+  };
+  if (m.type === 'mc') {
+    const order = shuffle(m.options.map((o, k) => k));
+    $app.innerHTML = `${topBar(pct(R.i, R.items.length), 'review')}<div class="card"><h2>${esc(m.q)}</h2>
+      ${m.audio ? `<div class="row">${sayBtn(m.audio, '▶ Escuchar', 'nativo')}${sayBtn(m.audio, '🐢', 'lento')}</div>` : ''}
+      ${order.map(k => `<button class="opt" data-k="${k}">${esc(m.options[k])}</button>`).join('')}<div id="fb"></div></div>`;
+    if (m.audio) setTimeout(() => speak(m.audio, 'nativo'), 300);
+    mcHandler(m.a, ok => {
+      resolve(ok);
+      document.getElementById('fb').innerHTML = `<div class="tip mt">${ok ? '✅ ' : '❌ '}${esc(m.why || '')}${m.audio ? `<br><b>"${esc(m.audio)}"</b>` : ''}</div><button class="btn block mt" id="rnx">Siguiente</button>`;
+      document.getElementById('rnx').onclick = () => { R.i++; go('reviewRun'); };
+    });
+  } else {
+    $app.innerHTML = `${topBar(pct(R.i, R.items.length), 'review')}<div class="card"><h2>Dilo otra vez</h2><p class="en" style="font-size:1.25rem">${esc(m.en)}</p>
+      <div class="row">${sayBtn(m.en, '▶ Escuchar', 'normal')}</div>${micBlock('rmic')}<div id="rres"></div></div>
+      <button class="btn block ghost" id="rskip">${canListen ? 'Saltar' : 'Ya lo dije ✓'}</button>`;
+    setTimeout(() => speak(m.en, 'normal'), 300);
+    document.getElementById('rskip').onclick = () => { if (!canListen) resolve(true); R.i++; go('reviewRun'); };
+    const mic = document.getElementById('rmic');
+    if (mic) mic.onclick = async () => {
+      mic.classList.add('on'); document.getElementById('rmic-st').textContent = 'Escuchando...';
+      try {
+        const alts = await listen(); mic.classList.remove('on');
+        const r = bestCompare(m.en, alts); resolve(r.score >= 75);
+        document.getElementById('rres').innerHTML = speakResult(r) + `<button class="btn block mt" id="rnx">Siguiente</button>`;
+        document.getElementById('rnx').onclick = () => { R.i++; go('reviewRun'); };
+      } catch (e) { mic.classList.remove('on'); micError(e, 'rmic-st'); }
+    };
+  }
+};
+
+/* =========================================================
+   Ajustes
+   ========================================================= */
+SCREENS.settings = () => {
+  loadVoices();
+  const cur = bestVoice();
+  $app.innerHTML = `<h1>Ajustes</h1>
+  <div class="card"><h3>Velocidad de Jake</h3>${speedPicker()}</div>
+  <div class="card"><h3>Voz (inglés de Estados Unidos)</h3>
+    ${voices.length ? `<select id="voice">${voices.map(v => `<option value="${esc(v.voiceURI)}" ${cur && cur.voiceURI === v.voiceURI ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
+    <p class="small muted mt mb0">Las voces que dicen "Natural", "Online" o "Google" suenan más reales.</p>`
+    : '<p class="small muted mb0">Tu dispositivo no tiene voces en inglés de EE. UU. instaladas. En Android: Ajustes → Idioma → Texto a voz → instala "English (United States)".</p>'}
+    <button class="btn ghost block mt" id="test">▶ Probar voz</button></div>
+  <div class="card"><h3>Conversaciones</h3><label class="row small"><input type="checkbox" id="st" ${S.settings.showText ? 'checked' : ''}> Mostrar el texto de lo que dice Jake</label></div>
+  <div class="card"><h3>Tu nivel</h3><p>Nivel actual: <b>${S.level} · ${LEVEL_NAMES[S.level]}</b></p>
+    <select id="lvl">${LEVELS.map(l => `<option ${l === S.level ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <button class="btn ghost block mt" id="retest">Volver a hacer el examen de nivel</button></div>
+  <div class="card"><h3>Borrar todo</h3><p class="small muted">Empieza desde cero (encuesta, examen y progreso).</p><button class="btn red block" id="reset">Borrar mi progreso</button></div>`;
+  const vs = document.getElementById('voice'); if (vs) vs.onchange = e => { S.settings.voice = e.target.value; save(); speak("Hey, this is my new voice. What do you think?"); };
+  document.getElementById('test').onclick = () => speak("Hey, what's up? I'm gonna help you learn English, alright?");
+  document.getElementById('st').onchange = e => { S.settings.showText = e.target.checked; save(); };
+  document.getElementById('lvl').onchange = e => { S.level = e.target.value; save(); toast('Nivel cambiado a ' + S.level); };
+  document.getElementById('retest').onclick = () => { PT = { i: 0, res: [] }; go('testIntro'); };
+  document.getElementById('reset').onclick = () => { if (confirm('¿Seguro? Se borra todo tu progreso.')) { localStorage.removeItem(KEY); S = load(); sv = { i: 0, ans: {} }; go('welcome'); } };
+};
+
+/* ========================================================= */
+go(S.level ? 'home' : (S.profile ? 'testIntro' : 'welcome'));
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
