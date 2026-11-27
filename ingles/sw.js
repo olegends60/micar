@@ -1,8 +1,8 @@
 // Service Worker de "Talk with Jake": la app funciona sin internet después de la primera visita.
 // (El reconocimiento de voz de Chrome sí necesita internet.)
 // Cambia el número cada vez que subas cambios para que los celulares los reciban.
-const CACHE_NAME = 'ingles-jake-v1';
-const APP_SHELL = ['./', 'index.html', 'data.js', 'manifest.json', 'icon.svg'];
+const CACHE_NAME = 'ingles-jake-v27';
+const APP_SHELL = ['./', 'index.html', 'data.js', 'extra.js', 'course.js', 'more.js', 'words.js', 'ai.js', 'texting.js', 'groserias.js', 'explain.js', 'fun.js', 'songs2.js', 'context.js', 'zero.js', 'street.js', 'integrate.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(APP_SHELL)).then(() => self.skipWaiting()));

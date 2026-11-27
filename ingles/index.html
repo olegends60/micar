@@ -76,6 +76,19 @@ p{margin:0 0 10px}
 .w-ok{color:var(--green);font-weight:700} .w-bad{color:var(--red);font-weight:700;text-decoration:underline wavy}
 .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:10}
 .nav[hidden]{display:none}
+.pron{color:var(--red);margin:1px 0}
+.easy{background:var(--green-soft);border-radius:12px;padding:12px 14px;margin-top:12px}
+.dotnum{flex:none;width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.85rem}
+.flash{min-height:230px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;cursor:pointer}
+.flash .word{font-size:1.7rem;font-weight:800}
+.lyric{padding:10px 12px;border-radius:10px;margin:4px 0;border:1px solid transparent;cursor:pointer}
+.lyric.now{background:var(--blue-soft);border-color:var(--blue)}
+.lyric .tr{color:var(--muted);font-size:.9rem}
+.expr{display:inline-block;background:var(--amber-soft);border-bottom:2px solid var(--amber);border-radius:4px;padding:0 2px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;border:0;border-radius:10px;padding:10px 4px;font:600 .88rem system-ui,sans-serif;background:#fff;color:var(--muted);cursor:pointer}
+.tabs button.sel{background:var(--blue);color:#fff}
+.lock{opacity:.6}
 .nav button{flex:1;max-width:128px;background:none;border:0;font:600 .72rem system-ui,sans-serif;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;cursor:pointer}
 .nav button b{font-size:1.35rem;font-weight:400}
 .nav button.act{color:var(--blue)}
@@ -105,9 +118,13 @@ input[type=text]:focus,textarea:focus{outline:none;border-color:var(--blue)}
   <button data-go="path"><b>📚</b>Lecciones</button>
   <button data-go="talk"><b>💬</b>Hablar</button>
   <button data-go="fast"><b>⚡</b>Oído</button>
-  <button data-go="settings"><b>⚙️</b>Ajustes</button>
+  <button data-go="more"><b>☰</b>Más</button>
 </nav>
 <script src="data.js"></script>
+<script src="extra.js"></script>
+<script src="course.js"></script>
+<script src="more.js"></script>
+<script src="words.js"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -166,7 +183,9 @@ function addMistake(m) {
 /* =========================================================
    Voz: hablar (inglés de EE. UU.) y escuchar (reconocimiento)
    ========================================================= */
-const SPEEDS = { lento: 0.75, normal: 1.0, nativo: 1.2, turbo: 1.45 };
+// Las velocidades están bien separadas para que se note la diferencia.
+// Además, "lento" habla por pedacitos con pausas: así se nota aunque la voz ignore la velocidad.
+const SPEEDS = { lento: 0.65, normal: 0.92, nativo: 1.15, turbo: 1.55 };
 const SPEED_LABEL = { lento: '🐢 Lento', normal: 'Normal', nativo: '🇺🇸 Nativo', turbo: '⚡ Súper rápido' };
 let voices = [];
 function loadVoices() {
@@ -181,35 +200,77 @@ function bestVoice() {
   for (const p of pref) { const v = voices.find(v => p.test(v.name)); if (v) return v; }
   return voices[0] || null;
 }
-let speakingEl = null;
-function speak(text, speed) {
+let speakToken = 0;
+// Divide una frase en pedacitos de 2-4 palabras respetando comas y puntos
+function chunks(text) {
+  const out = [];
+  text.split(/(?<=[,.!?;:—])\s+/).forEach(part => {
+    const w = part.split(/\s+/).filter(Boolean);
+    for (let i = 0; i < w.length; i += 3) out.push(w.slice(i, i + 3).join(' '));
+  });
+  return out;
+}
+function speakOne(text, rate, token) {
   return new Promise(res => {
-    if (!('speechSynthesis' in window)) { toast('Tu navegador no tiene voz. Usa Chrome o Safari.'); return res(); }
-    speechSynthesis.cancel();
+    if (token !== speakToken) return res();
     const u = new SpeechSynthesisUtterance(text);
     const v = bestVoice(); if (v) u.voice = v;
-    u.lang = 'en-US';
-    u.rate = SPEEDS[speed || S.settings.speed] || 1;
-    const av = document.querySelectorAll('.avatar.live');
-    av.forEach(a => a.classList.add('talking'));
-    const done = () => { av.forEach(a => a.classList.remove('talking')); res(); };
-    u.onend = done; u.onerror = done;
+    u.lang = 'en-US'; u.rate = rate;
+    u.onend = res; u.onerror = res;
     speechSynthesis.speak(u);
   });
+}
+async function speak(text, speed) {
+  if (!('speechSynthesis' in window)) { toast('Tu navegador no tiene voz. Usa Chrome, Edge o Safari.'); return; }
+  speechSynthesis.cancel();
+  const token = ++speakToken;
+  const sp = speed || S.settings.speed;
+  const av = document.querySelectorAll('.avatar.live');
+  av.forEach(a => a.classList.add('talking'));
+  if (sp === 'lento' && text.split(/\s+/).length > 3) {
+    for (const c of chunks(text)) {
+      if (token !== speakToken) break;
+      await speakOne(c, SPEEDS.lento, token);
+      await new Promise(r => setTimeout(r, 260));
+    }
+  } else {
+    await speakOne(text, SPEEDS[sp] || 1, token);
+  }
+  if (token === speakToken) av.forEach(a => a.classList.remove('talking'));
 }
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const canListen = !!SR;
 let rec = null;
-function listen() {
-  return new Promise((res, rej) => {
+let micOk = false;
+// Pide permiso del micrófono una vez para detectar si hay micrófono y si está permitido
+async function ensureMic() {
+  if (micOk || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop()); micOk = true;
+  } catch (e) {
+    throw new Error(e.name === 'NotFoundError' ? 'audio-capture' : 'not-allowed');
+  }
+}
+// onPartial(texto): muestra lo que va entendiendo mientras hablas
+function listen(onPartial) {
+  return new Promise(async (res, rej) => {
     if (!SR) return rej(new Error('nosr'));
+    if (!window.isSecureContext) return rej(new Error('insecure'));
     if ('speechSynthesis' in window) speechSynthesis.cancel();
-    rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 4;
-    let got = false;
-    rec.onresult = e => { got = true; const alts = []; for (const r of e.results[0]) alts.push(r.transcript); res(alts); };
-    rec.onerror = e => { if (!got) rej(new Error(e.error)); };
-    rec.onend = () => { if (!got) rej(new Error('no-speech')); };
-    try { rec.start(); } catch (e) { rej(e); }
+    try { await ensureMic(); } catch (e) { return rej(e); }
+    rec = new SR(); rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 4;
+    let done = false, partial = '';
+    const finish = alts => { if (done) return; done = true; res(alts); };
+    rec.onresult = e => {
+      const r = e.results[e.results.length - 1];
+      if (r.isFinal) { const alts = []; for (const a of r) alts.push(a.transcript); finish(alts); try { rec.stop(); } catch (x) {} }
+      else { partial = Array.from(e.results).map(x => x[0].transcript).join(' '); if (onPartial) onPartial(partial); }
+    };
+    rec.onerror = e => { if (done) return; if (partial && e.error === 'no-speech') return finish([partial]); done = true; rej(new Error(e.error)); };
+    rec.onend = () => { if (done) return; if (partial) return finish([partial]); done = true; rej(new Error('no-speech')); };
+    try { rec.start(); } catch (e) { done = true; rej(e); }
+    setTimeout(() => { if (!done) try { rec.stop(); } catch (x) {} }, 12000);
   });
 }
 function stopListen() { try { rec && rec.stop(); } catch (e) {} }
@@ -231,7 +292,7 @@ function compare(target, said) {
   while (i > 0 && j > 0) { if (t[i - 1] === s[j - 1]) { hit[i - 1] = true; i--; j--; } else if (dp[i - 1][j] >= dp[i][j - 1]) i--; else j--; }
   return { score: pct(dp[t.length][s.length], t.length), words: t, hit };
 }
-function bestCompare(target, alts) { return alts.map(a => Object.assign(compare(target, a), { said: a })).sort((a, b) => b.score - a.score)[0]; }
+function bestCompare(target, alts) { return alts.map(a => Object.assign(compare(target, a), { said: a, target })).sort((a, b) => b.score - a.score)[0]; }
 
 /* =========================================================
    Componentes pequeños
@@ -243,7 +304,7 @@ function jake(en, es, opts = {}) {
   return `<div class="jake"><div class="avatar live">J</div><div class="bubble">
     <div class="en ${hide ? 'hidden-text' : ''}" ${hide ? 'data-reveal title="Toca para ver el texto"' : ''}>${esc(en)}</div>
     ${es ? `<div class="es ${hide ? 'hidden-text' : ''}" ${hide ? 'data-reveal' : ''}>${esc(es)}</div>` : ''}
-    <div class="row mt wrap">${sayBtn(en, '▶ Escuchar')}${sayBtn(en, '🐢', 'lento')}</div></div></div>`;
+    <div class="row mt wrap">${sayBtn(en, '▶ Escuchar')}${sayBtn(en, '🐢 Lento', 'lento')}${sayBtn(en, '⚡', 'turbo')}</div></div></div>`;
 }
 function topBar(progress, backTo = 'home') {
   return `<div class="top"><button class="back" data-go="${backTo}" aria-label="Salir">✕</button>${progress != null ? `<div class="bar"><i style="width:${progress}%"></i></div>` : '<div class="grow"></div>'}</div>`;
@@ -261,11 +322,11 @@ function micBlock(id) {
    ========================================================= */
 let screen = 'home';
 function go(name, arg) {
-  stopListen(); if ('speechSynthesis' in window) speechSynthesis.cancel();
+  stopListen(); speakToken++; if ('speechSynthesis' in window) speechSynthesis.cancel();
   SAYS = [];
   screen = name;
   const nav = document.getElementById('nav');
-  const showNav = S.level && ['home', 'path', 'talk', 'fast', 'settings', 'review'].includes(name);
+  const showNav = S.level && ['home', 'path', 'talk', 'fast', 'settings', 'review', 'more', 'cards', 'guide', 'songs'].includes(name);
   nav.hidden = !showNav;
   nav.querySelectorAll('button').forEach(b => b.classList.toggle('act', b.dataset.go === name));
   (SCREENS[name] || SCREENS.home)(arg);
@@ -393,7 +454,7 @@ SCREENS.test = () => {
     if (m) m.onclick = async () => {
       m.classList.add('on'); document.getElementById('tmic-st').textContent = 'Escuchando...';
       try {
-        const alts = await listen(); const r = bestCompare(q.text, alts);
+        const alts = await listen(t => document.getElementById('tmic-st').textContent = '🎧 ' + t); const r = bestCompare(q.text, alts);
         m.classList.remove('on');
         document.getElementById('tres').innerHTML = speakResult(r) + `<button class="btn block mt" id="tnext">Siguiente</button>`;
         document.getElementById('tnext').onclick = () => recordTest(r.score >= 70, r.score);
@@ -516,15 +577,19 @@ SCREENS.home = () => {
     <h2 class="mt">${esc(nl.title)}</h2><p class="muted">${esc(nl.goal)}</p>
     <button class="btn block" id="go-lesson">Empezar lección</button></div>`
     : `<div class="card"><h2>🏆 ¡Terminaste todas las lecciones!</h2><p>Sigue con conversaciones y el oído nativo para mantenerte.</p></div>`}
+  ${(() => { const nc = COURSE.find(l => !(l.id in S.done)); return nc ? `<div class="card"><p class="tag">📘 Mi curso · Libro 1</p><h3 class="mt">Lesson ${nc.num}: ${esc(nc.title)}</h3><button class="btn block ghost" id="go-course" data-cid="${nc.id}">Repasar esta lección de mi curso</button></div>` : ''; })()}
   <div class="card"><p class="tag amber">Para pulir · ${SKILL_NAMES[wk]} ${wv}%</p>
     <h3 class="mt">${polish.t}</h3><p class="muted">${polish.d}</p>
     <button class="btn block ghost" data-go="${polish.go}">${polish.b}</button></div>
   <div class="grid2">
     <button class="card btn ghost" style="flex-direction:column;height:auto;padding:16px" data-go="talk"><span style="font-size:1.6rem">💬</span>Conversar</button>
+    <button class="card btn ghost" style="flex-direction:column;height:auto;padding:16px" data-go="cards"><span style="font-size:1.6rem">🧠</span>Memoria (${dueCards().length})</button>
     <button class="card btn ghost" style="flex-direction:column;height:auto;padding:16px" data-go="review"><span style="font-size:1.6rem">🔁</span>Repaso (${S.mistakes.length})</button>
+    <button class="card btn ghost" style="flex-direction:column;height:auto;padding:16px" data-go="guide"><span style="font-size:1.6rem">❓</span>Dudas</button>
   </div>
   <div class="card"><h3>Tu progreso</h3>${skillBars()}</div>`;
   const gl = document.getElementById('go-lesson'); if (gl) gl.onclick = () => startLesson(nl.id);
+  const gc = document.getElementById('go-course'); if (gc) gc.onclick = () => startLesson(gc.dataset.cid);
 };
 
 /* =========================================================
@@ -532,7 +597,13 @@ SCREENS.home = () => {
    ========================================================= */
 SCREENS.path = () => {
   const myIdx = LEVELS.indexOf(S.level);
-  $app.innerHTML = `<h1>Tus lecciones</h1><p class="muted">Empiezan en tu nivel. Puedes repasar niveles anteriores cuando quieras.</p>` +
+  const courseDone = COURSE.filter(l => l.id in S.done).length;
+  $app.innerHTML = `<h1>Tus lecciones</h1>
+    <div class="card"><div class="row"><h2 class="grow mb0">📘 Mi curso · Libro 1</h2><span class="tag">${courseDone}/${COURSE.length}</span></div>
+      <p class="small muted">Las mismas lecciones y temas de tu curso Beginners, en el mismo orden, explicadas paso por paso. Úsalas para repasar la lección que estás viendo en tus clases.</p>
+      <details ${courseDone < COURSE.length ? 'open' : ''}><summary class="small"><b>Ver las 14 lecciones</b></summary>
+      ${COURSE.map(l => { const done = l.id in S.done; return `<button class="lesson-row ${done ? 'done' : ''}" data-lesson="${l.id}"><span class="dot">${done ? '✓' : l.num}</span><span class="grow"><b>Lesson ${l.num}: ${esc(l.title)}</b><br><span class="small muted">${SKILL_NAMES[l.focus]}${done ? ' · ' + S.done[l.id] + '%' : ''}</span></span><span>›</span></button>`; }).join('')}</details></div>
+    <h2 class="mt">Camino por niveles</h2><p class="muted">Empiezan en tu nivel. Puedes repasar niveles anteriores cuando quieras.</p>` +
     LEVELS.map((lv, k) => {
       const ls = LESSONS.filter(l => l.level === lv);
       const locked = k > myIdx + 1;
@@ -551,16 +622,16 @@ SCREENS.path = () => {
    Lección paso a paso
    ========================================================= */
 let L = null;
-const STEPS = ['intro', 'vocab', 'explain', 'listen', 'speak', 'quiz', 'summary'];
-const STEP_NAME = { intro: '¿Qué vamos a aprender?', vocab: 'Palabras clave', explain: 'Explicación', listen: 'Escucha a un nativo', speak: 'Tu turno: habla', quiz: 'Practica', summary: 'Resumen' };
+const STEP_NAME = { intro: '¿Qué vamos a aprender?', vocab: 'Palabras clave', explain: 'Explicación', memo: 'Trucos para recordar', listen: 'Escucha a un nativo', speak: 'Tu turno: habla', quiz: 'Practica', summary: 'Resumen' };
 function startLesson(id) {
-  const lesson = LESSONS.find(l => l.id === id);
-  L = { lesson, step: 0, ok: 0, total: 0, qi: 0, si: 0, quiz: shuffle(lesson.quiz), missed: [] };
+  const lesson = LESSONS.concat(COURSE).find(l => l.id === id);
+  const steps = ['intro', 'vocab', 'explain'].concat(lesson.memo ? ['memo'] : [], ['listen', 'speak', 'quiz', 'summary']);
+  L = { lesson, steps, step: 0, ok: 0, total: 0, qi: 0, si: 0, quiz: shuffle(lesson.quiz), missed: [] };
   go('lesson');
 }
 function lessonNext() { L.step++; go('lesson'); }
 SCREENS.lesson = () => {
-  const l = L.lesson, st = STEPS[L.step];
+  const l = L.lesson, STEPS = L.steps, st = STEPS[L.step];
   const prog = pct(L.step, STEPS.length - 1);
   let h = `${topBar(prog, 'path')}<p class="tag">${l.level} · Paso ${Math.min(L.step + 1, STEPS.length)} de ${STEPS.length} · ${STEP_NAME[st]}</p>`;
   if (st === 'intro') {
@@ -572,25 +643,35 @@ SCREENS.lesson = () => {
     $app.innerHTML = h; setTimeout(() => speak(l.intro.en), 350);
   } else if (st === 'vocab') {
     h += `<div class="card mt"><h2>Palabras y frases clave</h2><p class="muted small">Toca ▶ para escuchar cada una.</p>
-      ${l.vocab.map(([en, es]) => `<div class="list-item"><div><div class="en">${esc(en)}</div><div class="es">${esc(es)}</div></div>${sayBtn(en.split(' / ')[0].replace(/\s*\(.*\)/, ''))}</div>`).join('')}</div>
+      ${l.vocab.map(([en, es, pr]) => { const t = en.split(' / ')[0].replace(/\s*\(.*\)/, ''); return `<div class="list-item"><div><div class="en">${esc(en)}</div>${pr ? `<div class="small pron">🗣️ se dice: <b>${esc(pr)}</b></div>` : ''}<div class="es">${esc(es)}</div></div><div class="row">${sayBtn(t)}${sayBtn(t, '🐢', 'lento')}</div></div>`; }).join('')}
+      <p class="small muted mt mb0">🗣️ "se dice" es una guía aproximada leída en español. Escucha siempre el audio.</p></div>
       <button class="btn block" id="nx">Entendido</button>`;
     $app.innerHTML = h;
   } else if (st === 'explain') {
-    h += `<div class="card mt explain"><h2>Te explico</h2>${l.explain}</div>
-      <div class="card"><h3>Ejemplos</h3>${l.examples.map(([en, es]) => `<div class="list-item"><div><div class="en">${esc(en)}</div><div class="es">${esc(es)}</div></div><div class="row">${sayBtn(en)}${sayBtn(en, '⚡', 'turbo')}</div></div>`).join('')}
-      <p class="small muted mt mb0">⚡ = cómo sonaría súper rápido.</p></div>
+    h += `<div class="card mt explain"><h2>Te explico</h2>${l.explain}
+      ${l.easy ? `<button class="btn ghost block mt" id="easy-btn">🤔 No entendí, explícamelo más fácil</button><div id="easy" class="easy" hidden><h3>Más fácil, paso por paso</h3>${l.easy}</div>` : ''}</div>
+      <div class="card"><h3>Ejemplos</h3>${l.examples.map(([en, es]) => `<div class="list-item"><div><div class="en">${esc(en)}</div><div class="es">${esc(es)}</div></div><div class="row">${sayBtn(en)}${sayBtn(en, '🐢', 'lento')}<button class="say" data-deepsent="${esc(en)}" data-es="${esc(es)}" title="Explícame esta frase">🔍</button></div></div>`).join('')}
+      <p class="small muted mt mb0">🔍 = te explico la frase palabra por palabra y por qué va así.</p></div>
       <button class="btn block" id="nx">Siguiente</button>`;
+    $app.innerHTML = h;
+    const eb = document.getElementById('easy-btn');
+    if (eb) eb.onclick = () => { document.getElementById('easy').hidden = false; eb.remove(); };
+  } else if (st === 'memo') {
+    h += `<div class="card mt"><h2>🧠 Trucos para que no se te olvide</h2>
+      ${l.memo.map((m, i) => `<div class="list-item" style="align-items:flex-start"><span class="dotnum">${i + 1}</span><span class="grow">${esc(m)}</span></div>`).join('')}</div>
+      <div class="card"><p class="small mb0">📌 Las palabras de esta lección se van a tu sección <b>🧠 Memoria</b> para repasarlas en los días correctos y que no se te olviden.</p></div>
+      <button class="btn block" id="nx">¡Listo!</button>`;
     $app.innerHTML = h;
   } else if (st === 'listen') {
     const q = l.listen; const order = shuffle(q.options.map((o, k) => k));
     h += `<div class="card mt"><h2>Escucha a velocidad nativa</h2>
-      <div class="row wrap">${sayBtn(q.text, '▶ Nativo', 'nativo')}${sayBtn(q.text, '⚡ Más rápido', 'turbo')}${sayBtn(q.text, '🐢 Lento', 'lento')}</div>
+      <div class="row wrap">${sayBtn(q.text, '▶ Escuchar')}${sayBtn(q.text, '⚡ Súper rápido', 'turbo')}${sayBtn(q.text, '🐢 Lento', 'lento')}</div>
       <h3 class="mt">${esc(q.q)}</h3>${order.map(k => `<button class="opt" data-k="${k}">${esc(q.options[k])}</button>`).join('')}<div id="fb"></div></div>`;
-    $app.innerHTML = h; setTimeout(() => speak(q.text, 'nativo'), 350);
+    $app.innerHTML = h; setTimeout(() => speak(q.text), 350);
     mcHandler(q.a, ok => {
       L.total++; if (ok) L.ok++; updSkill('listening', ok);
       if (!ok) { L.missed.push(q.text); addMistake({ type: 'mc', skill: 'listening', q: '🎧 ' + q.q, audio: q.text, options: q.options, a: q.a, why: q.note }); }
-      document.getElementById('fb').innerHTML = `<div class="tip mt"><p class="en mb0">"${esc(q.text)}"</p><p class="small mb0 mt">${esc(q.note)}</p></div><button class="btn block mt" id="nx">Continuar</button>`;
+      document.getElementById('fb').innerHTML = `<div class="tip mt"><p class="en mb0">"${esc(q.text)}"</p><p class="small mb0 mt">${esc(q.note)}</p></div><button class="btn ghost block mt" data-deepsent="${esc(q.text)}">🤔 No entendí la frase, explícamela</button><button class="btn block mt" id="nx">Continuar</button>`;
       document.getElementById('nx').onclick = lessonNext; save();
     });
     return;
@@ -598,7 +679,7 @@ SCREENS.lesson = () => {
     const phrase = l.speak[L.si];
     h += `<div class="card mt"><h2>Repite en voz alta (${L.si + 1}/${l.speak.length})</h2>
       <p class="en" style="font-size:1.3rem">${esc(phrase)}</p>
-      <div class="row">${sayBtn(phrase, '▶ Escuchar', 'normal')}${sayBtn(phrase, '🇺🇸 Nativo', 'nativo')}</div>
+      <div class="row wrap">${sayBtn(phrase, '▶ Escuchar')}${sayBtn(phrase, '🐢 Lento', 'lento')}<button class="say" data-deepsent="${esc(phrase)}">🔍 ¿Qué significa?</button></div>
       ${micBlock('lmic')}<div id="sres"></div></div>
       <button class="btn block ghost" id="sskip">${canListen ? 'Saltar esta frase' : 'Ya lo dije en voz alta ✓'}</button>`;
     $app.innerHTML = h;
@@ -608,7 +689,7 @@ SCREENS.lesson = () => {
     if (m) m.onclick = async () => {
       m.classList.add('on'); document.getElementById('lmic-st').textContent = 'Escuchando...';
       try {
-        const alts = await listen(); m.classList.remove('on'); document.getElementById('lmic-st').textContent = 'Toca para intentar otra vez';
+        const alts = await listen(t => document.getElementById('lmic-st').textContent = '🎧 ' + t); m.classList.remove('on'); document.getElementById('lmic-st').textContent = 'Toca para intentar otra vez';
         const r = bestCompare(phrase, alts); const ok = r.score >= 75;
         L.total++; if (ok) L.ok++; updSkill('speaking', ok, 0.2);
         if (!ok) addMistake({ type: 'speak', skill: 'speaking', en: phrase });
@@ -617,20 +698,21 @@ SCREENS.lesson = () => {
         document.getElementById('snext').onclick = advance;
       } catch (e) { m.classList.remove('on'); micError(e, 'lmic-st'); }
     };
-    setTimeout(() => speak(phrase, 'normal'), 350);
+    setTimeout(() => speak(phrase), 350);
     return;
   } else if (st === 'quiz') {
     const q = L.quiz[L.qi]; const order = shuffle(q.options.map((o, k) => k));
     h += `<div class="card mt"><p class="small muted">Pregunta ${L.qi + 1} de ${L.quiz.length}</p><h2>${esc(q.q)}</h2>
       ${order.map(k => `<button class="opt" data-k="${k}">${esc(q.options[k])}</button>`).join('')}<div id="fb"></div></div>`;
     $app.innerHTML = h;
-    mcHandler(q.a, ok => {
+    mcHandler(q.a, (ok, chosen) => {
+      window.LASTQ = { q: q.q, options: q.options, a: q.a, chosen, why: q.why, easy: l.easy };
       L.total++; if (ok) L.ok++; updSkill(l.focus === 'vocab' ? 'vocab' : 'grammar', ok);
       if (!ok) { L.missed.push(q.q); addMistake({ type: 'mc', skill: l.focus === 'vocab' ? 'vocab' : 'grammar', q: q.q, options: q.options, a: q.a, why: q.why }); }
       save();
-      document.getElementById('fb').innerHTML = `<div class="tip mt">${ok ? '✅ ¡Correcto! ' : '❌ '}${esc(q.why)}</div><button class="btn block mt" id="nx">Continuar</button>`;
+      document.getElementById('fb').innerHTML = `<div class="tip mt">${ok ? '✅ ¡Correcto! ' : '❌ '}${esc(q.why)}</div><button class="btn ghost block mt" data-deepq="1">🤔 ${ok ? '¿Por qué es así? Explícamelo a fondo' : 'No entiendo por qué, explícamelo a fondo'}</button><button class="btn block mt" id="nx">Continuar</button>`;
       document.getElementById('nx').onclick = () => { if (L.qi < L.quiz.length - 1) { L.qi++; go('lesson'); } else lessonNext(); };
-      if (ok) speak(['Nice!', 'Awesome!', 'You got it!', 'Nailed it!'][Math.floor(Math.random() * 4)], 'normal');
+      if (ok) speak(['Nice!', 'Awesome!', 'You got it!', 'Nailed it!'][Math.floor(Math.random() * 4)]);
     });
     return;
   } else if (st === 'summary') {
@@ -658,20 +740,53 @@ function mcHandler(answer, cb) {
     const k = +b.dataset.k, ok = k === answer;
     opts.forEach(o => { o.disabled = true; if (+o.dataset.k === answer) o.classList.add('ok'); });
     if (!ok) b.classList.add('bad');
-    cb(ok);
+    cb(ok, k);
   });
 }
 function speakResult(r) {
-  const words = r.words.map((w, i) => `<span class="${r.hit[i] ? 'w-ok' : 'w-bad'}">${esc(w)}</span>`).join(' ');
+  // Alinea lo que dijiste con la frase original (respetando contracciones como I'm)
+  const toks = (r.target || r.words.join(' ')).split(/\s+/).filter(Boolean);
+  const flat = []; toks.forEach((t, ti) => norm(t).forEach(w => flat.push({ w, ti })));
+  const said = norm(r.said || '');
+  const dp = Array.from({ length: flat.length + 1 }, () => Array(said.length + 1).fill(0));
+  for (let i = 1; i <= flat.length; i++) for (let j = 1; j <= said.length; j++)
+    dp[i][j] = flat[i - 1].w === said[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  const hit = Array(flat.length).fill(false);
+  let i = flat.length, j = said.length;
+  while (i > 0 && j > 0) { if (flat[i - 1].w === said[j - 1]) { hit[i - 1] = true; i--; j--; } else if (dp[i - 1][j] >= dp[i][j - 1]) i--; else j--; }
+  const tokOk = toks.map(() => true); flat.forEach((f, k) => { if (!hit[k]) tokOk[f.ti] = false; });
+  // Agrupa en tramos: lo bien dicho en verde y lo mal dicho en rojo; cada tramo se puede escuchar solo
+  let segs = '', a = 0; const bad = [];
+  while (a < toks.length) {
+    let b = a; while (b < toks.length && tokOk[b] === tokOk[a]) b++;
+    const seg = toks.slice(a, b).join(' '), clean = seg.replace(/[^\w'’ -]/g, '').trim();
+    SAYS.push({ text: clean || seg, speed: tokOk[a] ? undefined : 'normal' });
+    segs += `<button class="seg ${tokOk[a] ? 'seg-ok' : 'seg-bad'}" data-say="${SAYS.length - 1}" title="Toca para escuchar">${esc(seg)}</button>`;
+    if (!tokOk[a]) { SAYS.push({ text: clean || seg, speed: 'lento' }); bad.push(`<span class="small">🔴 <b>${esc(seg)}</b></span> <button class="say" data-say="${SAYS.length - 2}">▶</button><button class="say" data-say="${SAYS.length - 1}">🐢</button>`); }
+    a = b;
+  }
   const c = r.score >= 85 ? 'green' : r.score >= 60 ? 'amber' : 'red';
-  const msg = r.score >= 85 ? '¡Excelente pronunciación!' : r.score >= 60 ? '¡Casi! Revisa las palabras en rojo.' : 'Escúchalo otra vez y repite despacio.';
+  const msg = r.score >= 85 ? '¡Excelente pronunciación!' : r.score >= 60 ? '¡Casi! Revisa lo que está en rojo.' : 'Escucha cada parte en rojo y repite despacio.';
+  const full = r.target || toks.join(' ');
   return `<div class="mt"><div class="row"><span class="tag ${c}">${r.score}%</span><span class="small">${msg}</span></div>
-    <p class="small mt mb0"><b>Entendí:</b> "${esc(r.said)}"</p><p class="mt mb0">${words}</p></div>`;
+    <p class="small mt mb0"><b>Entendí:</b> "${esc(r.said)}"</p>
+    <p class="mt mb0" style="line-height:2">${segs}</p>
+    ${bad.length ? `<div class="tip mt"><p class="small mb0"><b>👆 Toca lo rojo para escuchar solo esa parte:</b></p>${bad.map(x => `<div class="row mt">${x}</div>`).join('')}</div>` : ''}
+    <div class="row wrap mt">${sayBtn(full, '▶ Frase completa')}${sayBtn(full, '🐢 Frase lenta', 'lento')}<button class="say" data-deepsent="${esc(full)}">🔍 Explícame la frase</button></div></div>`;
 }
+const MIC_ERRORS = {
+  'not-allowed': '🔒 El micrófono está bloqueado. Toca el candado 🔒 junto a la dirección de la página y permite el micrófono.',
+  'service-not-allowed': '🔒 El navegador no permite reconocer voz aquí. Abre la app en Google Chrome o Microsoft Edge.',
+  'audio-capture': '🎤 No encontré ningún micrófono. Revisa que esté conectado o que ninguna otra app lo esté usando.',
+  'network': '📶 Para reconocer tu voz se necesita internet.',
+  'insecure': '🔒 El micrófono solo funciona en páginas seguras (https). Abre la app desde su dirección https.',
+  'nosr': 'Este navegador no reconoce voz. Usa Google Chrome (Android o computadora) o Microsoft Edge.',
+  'language-not-supported': 'Tu navegador no tiene reconocimiento de inglés. Prueba con Google Chrome.',
+  'aborted': 'Se interrumpió. Toca el micrófono otra vez.'
+};
 function micError(e, stId) {
   const el = document.getElementById(stId);
-  const m = e.message;
-  if (el) el.textContent = m === 'not-allowed' ? 'Permite el micrófono en tu navegador 🎤' : m === 'network' ? 'Necesitas internet para reconocer tu voz.' : 'No te escuché. Toca y habla otra vez.';
+  if (el) el.textContent = MIC_ERRORS[e.message] || 'No te escuché. Toca el micrófono y habla fuerte y claro, cerca del teléfono.';
 }
 
 /* =========================================================
@@ -726,7 +841,7 @@ function renderConv(speakNow) {
   document.getElementById('csend').onclick = () => { const v = document.getElementById('ctext').value.trim(); if (v) submit(v); };
   document.getElementById('ctext').onkeydown = e => { if (e.key === 'Enter') { const v = e.target.value.trim(); if (v) submit(v); } };
   document.getElementById('chelp').onclick = () => {
-    document.getElementById('chelpbox').innerHTML = `<div class="tip mt"><p class="small mb0">${esc(turn.tip)}</p><p class="en mt mb0">Ejemplo: "${esc(turn.model)}"</p><div class="mt">${sayBtn(turn.model.split(' / ')[0], '▶ Escuchar ejemplo', 'normal')}</div></div>`;
+    document.getElementById('chelpbox').innerHTML = `<div class="tip mt"><p class="small mb0">${esc(turn.tip)}</p><p class="en mt mb0">Ejemplo: "${esc(turn.model)}"</p><div class="mt">${sayBtn(turn.model.split(' / ')[0], '▶ Escuchar ejemplo') + sayBtn(turn.model.split(' / ')[0], '🐢', 'lento')}</div></div>`;
   };
   document.getElementById('cwhat').onclick = () => {
     $app.querySelectorAll('[data-reveal]').forEach(x => { x.classList.remove('hidden-text'); x.removeAttribute('data-reveal'); });
@@ -735,7 +850,7 @@ function renderConv(speakNow) {
   const m = document.getElementById('cmic');
   if (m) m.onclick = async () => {
     m.classList.add('on'); document.getElementById('cmic-st').textContent = 'Escuchando...';
-    try { const alts = await listen(); m.classList.remove('on'); submit(alts[0]); }
+    try { const alts = await listen(t => document.getElementById('cmic-st').textContent = '🎧 ' + t); m.classList.remove('on'); submit(alts[0]); }
     catch (e) { m.classList.remove('on'); micError(e, 'cmic-st'); }
   };
 }
@@ -759,7 +874,7 @@ function handleConvAnswer(text) {
     C.log.push({ who: 'coach', html: `<b>🧑‍🏫 Tip:</b> ${esc(turn.tip)}<br>Una respuesta natural sería: <b>"${esc(turn.model)}"</b>` });
     C.i++; save();
     renderConv(false);
-    speak(turn.model.split(' / ')[0], 'normal').then(() => { if (screen === 'conv') setTimeout(() => renderConv(true), 600); });
+    speak(turn.model.split(' / ')[0]).then(() => { if (screen === 'conv') setTimeout(() => renderConv(true), 600); });
   }
 }
 
@@ -835,25 +950,26 @@ SCREENS.reviewRun = () => {
   if (m.type === 'mc') {
     const order = shuffle(m.options.map((o, k) => k));
     $app.innerHTML = `${topBar(pct(R.i, R.items.length), 'review')}<div class="card"><h2>${esc(m.q)}</h2>
-      ${m.audio ? `<div class="row">${sayBtn(m.audio, '▶ Escuchar', 'nativo')}${sayBtn(m.audio, '🐢', 'lento')}</div>` : ''}
+      ${m.audio ? `<div class="row">${sayBtn(m.audio, '▶ Escuchar')}${sayBtn(m.audio, '🐢', 'lento')}</div>` : ''}
       ${order.map(k => `<button class="opt" data-k="${k}">${esc(m.options[k])}</button>`).join('')}<div id="fb"></div></div>`;
-    if (m.audio) setTimeout(() => speak(m.audio, 'nativo'), 300);
-    mcHandler(m.a, ok => {
+    if (m.audio) setTimeout(() => speak(m.audio), 300);
+    mcHandler(m.a, (ok, chosen) => {
+      window.LASTQ = { q: m.q.replace(/^🎧 /, ''), options: m.options, a: m.a, chosen, why: m.why };
       resolve(ok);
-      document.getElementById('fb').innerHTML = `<div class="tip mt">${ok ? '✅ ' : '❌ '}${esc(m.why || '')}${m.audio ? `<br><b>"${esc(m.audio)}"</b>` : ''}</div><button class="btn block mt" id="rnx">Siguiente</button>`;
+      document.getElementById('fb').innerHTML = `<div class="tip mt">${ok ? '✅ ' : '❌ '}${esc(m.why || '')}${m.audio ? `<br><b>"${esc(m.audio)}"</b>` : ''}</div>${m.audio ? `<button class="btn ghost block mt" data-deepsent="${esc(m.audio)}">🤔 Explícame la frase</button>` : '<button class="btn ghost block mt" data-deepq="1">🤔 Explícamelo a fondo</button>'}<button class="btn block mt" id="rnx">Siguiente</button>`;
       document.getElementById('rnx').onclick = () => { R.i++; go('reviewRun'); };
     });
   } else {
     $app.innerHTML = `${topBar(pct(R.i, R.items.length), 'review')}<div class="card"><h2>Dilo otra vez</h2><p class="en" style="font-size:1.25rem">${esc(m.en)}</p>
-      <div class="row">${sayBtn(m.en, '▶ Escuchar', 'normal')}</div>${micBlock('rmic')}<div id="rres"></div></div>
+      <div class="row">${sayBtn(m.en, '▶ Escuchar')}${sayBtn(m.en, '🐢', 'lento')}</div>${micBlock('rmic')}<div id="rres"></div></div>
       <button class="btn block ghost" id="rskip">${canListen ? 'Saltar' : 'Ya lo dije ✓'}</button>`;
-    setTimeout(() => speak(m.en, 'normal'), 300);
+    setTimeout(() => speak(m.en), 300);
     document.getElementById('rskip').onclick = () => { if (!canListen) resolve(true); R.i++; go('reviewRun'); };
     const mic = document.getElementById('rmic');
     if (mic) mic.onclick = async () => {
       mic.classList.add('on'); document.getElementById('rmic-st').textContent = 'Escuchando...';
       try {
-        const alts = await listen(); mic.classList.remove('on');
+        const alts = await listen(t => document.getElementById('rmic-st').textContent = '🎧 ' + t); mic.classList.remove('on');
         const r = bestCompare(m.en, alts); resolve(r.score >= 75);
         document.getElementById('rres').innerHTML = speakResult(r) + `<button class="btn block mt" id="rnx">Siguiente</button>`;
         document.getElementById('rnx').onclick = () => { R.i++; go('reviewRun'); };
@@ -874,13 +990,23 @@ SCREENS.settings = () => {
     ${voices.length ? `<select id="voice">${voices.map(v => `<option value="${esc(v.voiceURI)}" ${cur && cur.voiceURI === v.voiceURI ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
     <p class="small muted mt mb0">Las voces que dicen "Natural", "Online" o "Google" suenan más reales.</p>`
     : '<p class="small muted mb0">Tu dispositivo no tiene voces en inglés de EE. UU. instaladas. En Android: Ajustes → Idioma → Texto a voz → instala "English (United States)".</p>'}
-    <button class="btn ghost block mt" id="test">▶ Probar voz</button></div>
+    <button class="btn ghost block mt" id="test">▶ Probar voz</button>
+    <div class="row mt">${sayBtn("This is my slow voice, so you can understand every word.", '🐢 Probar lenta', 'lento')}${sayBtn("And this is how fast people really talk back home, alright?", '⚡ Probar rápida', 'turbo')}</div>
+    <p class="small tip mt mb0">💡 <b>¿Quieres una voz más real?</b> En computadora abre la app en <b>Microsoft Edge</b>: trae gratis voces neuronales de EE. UU. (Andrew, Ava, Emma, Brian, Jenny, Guy) que suenan casi humanas. Elige una que diga "Natural". En Android, instala la voz "English (United States)" de Google en Ajustes → Texto a voz.</p></div>
+  <div class="card"><h3>🎤 Micrófono</h3><p class="small muted">Toca, di algo en inglés (por ejemplo "Hello, how are you?") y revisa que aparezca lo que dijiste.</p>
+    ${micBlock('smic')}<p class="small muted mt mb0">Funciona en Google Chrome y Microsoft Edge, con internet. En iPhone usa Safari.</p></div>
   <div class="card"><h3>Conversaciones</h3><label class="row small"><input type="checkbox" id="st" ${S.settings.showText ? 'checked' : ''}> Mostrar el texto de lo que dice Jake</label></div>
   <div class="card"><h3>Tu nivel</h3><p>Nivel actual: <b>${S.level} · ${LEVEL_NAMES[S.level]}</b></p>
     <select id="lvl">${LEVELS.map(l => `<option ${l === S.level ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <button class="btn ghost block mt" id="retest">Volver a hacer el examen de nivel</button></div>
   <div class="card"><h3>Borrar todo</h3><p class="small muted">Empieza desde cero (encuesta, examen y progreso).</p><button class="btn red block" id="reset">Borrar mi progreso</button></div>`;
   const vs = document.getElementById('voice'); if (vs) vs.onchange = e => { S.settings.voice = e.target.value; save(); speak("Hey, this is my new voice. What do you think?"); };
+  const sm = document.getElementById('smic');
+  if (sm) sm.onclick = async () => {
+    const st = document.getElementById('smic-st'); sm.classList.add('on'); st.textContent = 'Escuchando... habla ahora';
+    try { const alts = await listen(t => st.textContent = '🎧 ' + t); sm.classList.remove('on'); st.innerHTML = '✅ ¡Funciona! Entendí: <b>"' + esc(alts[0]) + '"</b>'; }
+    catch (e) { sm.classList.remove('on'); micError(e, 'smic-st'); }
+  };
   document.getElementById('test').onclick = () => speak("Hey, what's up? I'm gonna help you learn English, alright?");
   document.getElementById('st').onchange = e => { S.settings.showText = e.target.checked; save(); };
   document.getElementById('lvl').onchange = e => { S.level = e.target.value; save(); toast('Nivel cambiado a ' + S.level); };
@@ -888,9 +1014,577 @@ SCREENS.settings = () => {
   document.getElementById('reset').onclick = () => { if (confirm('¿Seguro? Se borra todo tu progreso.')) { localStorage.removeItem(KEY); S = load(); sv = { i: 0, ans: {} }; go('welcome'); } };
 };
 
+/* =========================================================
+   Menú "Más"
+   ========================================================= */
+// ⚠️ PRUEBAS: canciones desbloqueadas para todos. Antes de publicar la app, cambiar a false
+// para que se desbloqueen al llegar a B1 o al completar 10 lecciones.
+const SONGS_TEST_UNLOCK = true;
+function songsUnlocked() {
+  if (SONGS_TEST_UNLOCK) return true;
+  return LEVELS.indexOf(S.level) >= 2 || Object.keys(S.done).length >= 10;
+}
+SCREENS.more = () => {
+  const due = dueCards().length;
+  const item = (go, icon, t, d, extra = '') => `<button class="lesson-row" data-go="${go}"><span class="dot" style="font-size:1.2rem">${icon}</span><span class="grow"><b>${t}</b><br><span class="small muted">${d}</span></span>${extra}<span>›</span></button>`;
+  $app.innerHTML = `<h1>Más</h1>
+    ${item('cards', '🧠', 'Memoria', 'Tarjetas para que no se te olvide nada', due ? `<span class="tag red">${due}</span>` : '')}
+    ${item('guide', '❓', 'Dudas', 'Explicaciones detalladas de todo')}
+    ${item('songs', songsUnlocked() ? '🎵' : '🔒', 'Inglés con canciones', songsUnlocked() ? 'Aprende con tu canción favorita' : 'Se desbloquea en nivel B1 o con 10 lecciones')}
+    ${item('review', '🔁', 'Repaso de errores', S.mistakes.length + ' pendiente(s)')}
+    ${item('settings', '⚙️', 'Ajustes', 'Voz, velocidad, nivel')}`;
+};
+
+/* =========================================================
+   Memoria: tarjetas con repaso espaciado (para quien le cuesta memorizar)
+   ========================================================= */
+const DAY = 86400000;
+const INTERVALS = [0, 1, 2, 4, 7, 15, 30, 60]; // días según la "caja" de la tarjeta
+function deckCards() {
+  const my = LEVELS.indexOf(S.level);
+  let ls = LESSONS.filter(l => (l.id in S.done) || LEVELS.indexOf(l.level) < my).concat(COURSE.filter(l => l.id in S.done));
+  if (!ls.length) ls = LESSONS.slice(0, 2);
+  const out = [];
+  ls.forEach(l => l.vocab.forEach(v => out.push({ id: l.id + '|' + v[0], en: v[0], es: v[1], pr: v[2], tip: l.memo ? l.memo[0] : '', from: l.title })));
+  (S.customCards || []).forEach(c => out.push(Object.assign({ from: c.from || 'Tus canciones' }, c)));
+  return out;
+}
+function dueCards() {
+  S.cards = S.cards || {};
+  const now = Date.now();
+  const all = deckCards();
+  const old = all.filter(c => S.cards[c.id] && S.cards[c.id].due <= now);
+  const fresh = all.filter(c => !S.cards[c.id]).slice(0, 8);
+  return old.concat(fresh);
+}
+let MC = null;
+SCREENS.cards = () => {
+  S.cards = S.cards || {};
+  const all = deckCards(); const due = dueCards();
+  const learned = all.filter(c => S.cards[c.id] && S.cards[c.id].box >= 4).length;
+  const learning = all.filter(c => S.cards[c.id] && S.cards[c.id].box < 4).length;
+  $app.innerHTML = `<h1>🧠 Memoria</h1><p class="muted">Tarjetas con las palabras que ya viste. La app te las enseña justo antes de que se te olviden.</p>
+    <div class="card"><div class="grid2 center">
+      <div><div class="big" style="font-size:2rem">${due.length}</div><div class="small muted">para hoy</div></div>
+      <div><div class="big" style="font-size:2rem;color:var(--green)">${learned}</div><div class="small muted">ya memorizadas</div></div></div>
+      <p class="small muted center mt mb0">${learning} aprendiendo · ${all.length} en total</p>
+      ${due.length ? `<button class="btn block red mt" id="mgo">Repasar ${due.length} tarjetas</button>
+      <button class="btn block ghost mt" id="mrev">Modo difícil: de español a inglés</button>` : '<p class="center mt mb0">✅ ¡Ya repasaste todo por hoy! Regresa mañana.</p>'}</div>
+    <div class="card"><h3>¿Te cuesta memorizar? Así funciona</h3>
+      ${MEMORY_TIPS.map(t => `<div class="list-item" style="align-items:flex-start"><span style="font-size:1.4rem">${t.icon}</span><span class="grow"><b>${t.t}</b><br><span class="small muted">${t.d}</span></span></div>`).join('')}</div>`;
+  const start = rev => { MC = { items: shuffle(due), i: 0, rev, flipped: false, ok: 0 }; go('cardsRun'); };
+  const g = document.getElementById('mgo'); if (g) g.onclick = () => start(false);
+  const r = document.getElementById('mrev'); if (r) r.onclick = () => start(true);
+};
+SCREENS.cardsRun = () => {
+  if (MC.i >= MC.items.length) {
+    addXP(5); save();
+    $app.innerHTML = `${topBar(100, 'cards')}<div class="card center"><p style="font-size:2.4rem">🧠</p><h2>¡Repaso terminado!</h2><p class="muted">Recordaste ${MC.ok} de ${MC.items.length} a la primera. Las que fallaste te las vuelvo a enseñar pronto.</p><button class="btn block" data-go="home">Inicio</button></div>`;
+    return;
+  }
+  const c = MC.items[MC.i];
+  const word = c.en.split(' / ')[0].replace(/\s*\(.*\)/, '');
+  const front = MC.rev
+    ? `<div class="small muted">¿Cómo se dice en inglés?</div><div class="word mt">${esc(c.es)}</div>`
+    : `<div class="small muted">¿Qué significa?</div><div class="word mt">${esc(c.en)}</div>${c.pr ? `<div class="pron mt">🗣️ ${esc(c.pr)}</div>` : ''}`;
+  const back = `<hr style="width:100%;border:0;border-top:1px solid var(--line);margin:14px 0">
+    <div class="word" style="font-size:1.3rem">${esc(MC.rev ? c.en : c.es)}</div>${MC.rev && c.pr ? `<div class="pron">🗣️ ${esc(c.pr)}</div>` : ''}
+    ${c.tip ? `<p class="small tip mt mb0" style="text-align:left">💡 ${esc(c.tip)}</p>` : ''}<p class="small muted mt mb0">De: ${esc(c.from)}</p>`;
+  $app.innerHTML = `${topBar(pct(MC.i, MC.items.length), 'cards')}
+    <div class="card flash" id="fc">${front}${MC.flipped ? back : '<p class="small muted mt">Piénsalo o dilo en voz alta… luego toca la tarjeta</p>'}</div>
+    <div class="row" style="justify-content:center">${sayBtn(word, '▶ Escuchar')}${sayBtn(word, '🐢', 'lento')}</div>
+    <div class="mt">${MC.flipped ? `<div class="row"><button class="btn red grow" id="no">😕 No me acordé</button><button class="btn green grow" id="yes">🙂 Me acordé</button></div>`
+      : '<button class="btn block" id="flip">Ver respuesta</button>'}</div>`;
+  if (!MC.rev && !MC.flipped) setTimeout(() => speak(word), 250);
+  const flip = () => { if (!MC.flipped) { MC.flipped = true; SCREENS.cardsRun(); if (MC.rev) speak(word); } };
+  document.getElementById('fc').onclick = flip;
+  const f = document.getElementById('flip'); if (f) f.onclick = flip;
+  const rate = ok => {
+    const cur = S.cards[c.id] || { box: 0 };
+    if (ok) { cur.box = Math.min(cur.box + 1, INTERVALS.length - 1); cur.due = Date.now() + INTERVALS[cur.box] * DAY; if (!c._again) MC.ok++; }
+    else { cur.box = 1; cur.due = Date.now() + 10 * 60000; c._again = true; MC.items.push(c); }
+    S.cards[c.id] = cur; updSkill('vocab', ok, 0.05); save();
+    MC.i++; MC.flipped = false; SCREENS.cardsRun();
+  };
+  const y = document.getElementById('yes'); if (y) y.onclick = () => rate(true);
+  const n = document.getElementById('no'); if (n) n.onclick = () => rate(false);
+};
+
+/* =========================================================
+   Dudas: guía con explicaciones detalladas
+   ========================================================= */
+let guideQ = '', guideCat = 'Todas';
+SCREENS.guide = () => {
+  const cats = ['Todas', ...new Set(GUIDE.map(g => g.cat))];
+  const plain = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const list = GUIDE.filter(g => (guideCat === 'Todas' || g.cat === guideCat) && (!guideQ || plain(g.t + ' ' + g.b.replace(/<[^>]+>/g, ' ')).includes(plain(guideQ))));
+  $app.innerHTML = `<h1>❓ Dudas</h1><p class="muted">Explicaciones detalladas, en español y sin palabras complicadas.</p>
+    <input type="text" id="gq" placeholder="Busca tu duda: do does, in on at, th..." value="${esc(guideQ)}">
+    <div class="speedsel mt">${cats.map(c => `<button data-cat="${esc(c)}" class="${c === guideCat ? 'sel' : ''}">${esc(c)}</button>`).join('')}</div>
+    <div class="mt">${list.length ? list.map((g, i) => `<details class="card" ${list.length === 1 ? 'open' : ''}><summary><b>${esc(g.t)}</b> <span class="tag">${esc(g.cat)}</span></summary><div class="explain mt">${g.b}</div></details>`).join('')
+      : '<div class="card"><p class="mb0">No encontré esa duda. Prueba con otra palabra o revisa la lección del tema.</p></div>'}</div>`;
+  const q = document.getElementById('gq');
+  q.oninput = () => { guideQ = q.value; const pos = q.selectionStart; SCREENS.guide(); const n = document.getElementById('gq'); n.focus(); n.setSelectionRange(pos, pos); };
+  $app.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { guideCat = b.dataset.cat; SCREENS.guide(); });
+};
+
+/* =========================================================
+   Inglés con canciones (la canción se guarda solo en tu teléfono)
+   ========================================================= */
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('ingles-jake', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('songs', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function songsAll() { const db = await idb(); return new Promise(res => { const q = db.transaction('songs').objectStore('songs').getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); }
+async function songPut(s) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('songs', 'readwrite'); t.objectStore('songs').put(s); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function songDel(id) { const db = await idb(); return new Promise(res => { const t = db.transaction('songs', 'readwrite'); t.objectStore('songs').delete(id); t.oncomplete = res; }); }
+
+// Busca expresiones en un texto y devuelve [{e, start, end}]
+function findExpr(line) {
+  const hits = [];
+  EXPRESSIONS.forEach(e => {
+    const m = line.match(e.re);
+    if (!m) return;
+    let start = m.index, txt = m[0];
+    const lead = txt.match(/^[^a-z'’]*/i)[0].length; start += lead; txt = txt.slice(lead);
+    hits.push({ e, start, end: start + txt.length, txt });
+  });
+  hits.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  const out = []; let last = -1;
+  hits.forEach(h => { if (h.start >= last) { out.push(h); last = h.end; } });
+  return out;
+}
+function markLine(line) {
+  const hits = findExpr(line); let html = '', pos = 0;
+  hits.forEach(h => { html += esc(line.slice(pos, h.start)) + `<span class="expr">${esc(line.slice(h.start, h.end))}</span>`; pos = h.end; });
+  return html + esc(line.slice(pos));
+}
+
+SCREENS.songs = async () => {
+  if (!songsUnlocked()) {
+    const done = Object.keys(S.done).length;
+    $app.innerHTML = `<h1>🎵 Inglés con canciones</h1><div class="card center lock"><p style="font-size:2.6rem">🔒</p><h2>Todavía no está desbloqueado</h2>
+      <p>Las canciones usan slang, reducciones y modismos. Para que te sirvan de verdad, primero necesitas una base.</p>
+      <p><b>Se desbloquea cuando:</b> llegues a nivel <b>B1</b> o completes <b>10 lecciones</b>.</p>
+      <div class="bar mt"><i style="width:${Math.min(100, done * 10)}%"></i></div><p class="small muted mt">${done} de 10 lecciones</p>
+      <button class="btn" data-go="path">Ir a mis lecciones</button></div>`;
+    return;
+  }
+  const list = await songsAll();
+  if (screen !== 'songs') return;
+  $app.innerHTML = `<h1>🎵 Inglés con canciones</h1><p class="muted">Agrega tu canción favorita con un link o un archivo. Te marco los phrasal verbs, el slang y las frases rápidas, te las explico y practicas con ejercicios.</p>
+    <button class="btn block red" data-go="songAdd">➕ Agregar una canción</button>
+    <div class="mt">${list.length ? list.sort((a, b) => b.id - a.id).map(s => `<button class="lesson-row" data-song="${s.id}"><span class="dot">🎵</span><span class="grow"><b>${esc(s.title)}</b><br><span class="small muted">${esc(s.artist || '')} · ${findAllExpr(s.lyrics).length} expresiones</span></span><span>›</span></button>`).join('')
+      : `<div class="card"><h3>¿Cómo funciona?</h3>
+        <div class="list-item">🔗 <b>Opción fácil:</b> pega el link de YouTube o Spotify. Yo identifico la canción y busco la letra sola.</div>
+        <div class="list-item">📁 <b>O</b> sube el archivo de audio de tu teléfono (mp3, m4a…) y busco la letra por el nombre.</div>
+        <div class="list-item">💡 Te marco y explico phrasal verbs, slang, groserías y modismos, y te traduzco cada verso.</div>
+        <div class="list-item">✍️ Practicas con ejercicios y la letra se ilumina mientras suena.</div>
+        <p class="small muted mt mb0">🔒 Tus canciones se guardan solo en tu teléfono.</p></div>`}</div>`;
+  $app.querySelectorAll('[data-song]').forEach(b => b.onclick = () => openSong(+b.dataset.song));
+};
+function findAllExpr(lyrics) {
+  const map = new Map();
+  (lyrics || '').split('\n').forEach((line, i) => findExpr(line).forEach(h => { if (!map.has(h.e.k)) map.set(h.e.k, { e: h.e, line, i }); }));
+  return [...map.values()];
+}
+
+/* ---------- Servicios externos (gratuitos, sin cuenta) ----------
+   - YouTube / Spotify / noembed: saber qué canción es a partir del link
+   - LRCLIB: letra de la canción (muchas veces con tiempos por verso)
+   - MyMemory: traducción automática de versos y palabras */
+function parseSongUrl(u) {
+  u = (u || '').trim();
+  let m = u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/);
+  if (m) return { provider: 'youtube', id: m[1], url: u };
+  m = u.match(/open\.spotify\.com\/(?:intl-[\w-]+\/)?track\/(\w+)/);
+  if (m) return { provider: 'spotify', id: m[1], url: u };
+  if (/^https?:\/\//i.test(u)) return { provider: 'link', url: u };
+  return null;
+}
+async function getJSON(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function identifySong(p) {
+  let title = '', author = '';
+  try {
+    if (p.provider === 'youtube') { const d = await getJSON('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + p.id)); title = d.title; author = d.author_name; }
+    else if (p.provider === 'spotify') { const d = await getJSON('https://open.spotify.com/oembed?url=' + encodeURIComponent(p.url)); title = d.title; author = ''; }
+    else { const d = await getJSON('https://noembed.com/embed?url=' + encodeURIComponent(p.url)); title = d.title || ''; author = d.author_name || ''; }
+  } catch (e) {}
+  return cleanSongTitle(title, author);
+}
+function cleanSongTitle(title, author) {
+  let t = (title || '').replace(/[–—]/g, '-').replace(/\s*[\(\[][^\)\]]*[\)\]]/g, '').replace(/\s+(ft\.?|feat\.?|featuring)\s.*$/i, '').replace(/\s*\|.*$/, '').trim();
+  t = t.replace(/\s*-\s*(remaster(ed)?( \d{4})?|\d{4} remaster(ed)?|official.*|lyrics?.*|audio|video)$/i, '').trim();
+  let artist = '', track = t;
+  const parts = t.split(/\s+-\s+/);
+  if (parts.length >= 2) { artist = parts[0].trim(); track = parts.slice(1).join(' - ').trim(); }
+  else artist = (author || '').replace(/\s*-\s*topic$/i, '').replace(/vevo$/i, '').replace(/\s*official$/i, '').trim();
+  return { artist, track, raw: title };
+}
+async function searchLyrics(artist, track) {
+  const base = 'https://lrclib.net/api/search?';
+  let res = [];
+  try { if (artist && track) res = await getJSON(base + 'track_name=' + encodeURIComponent(track) + '&artist_name=' + encodeURIComponent(artist)); } catch (e) {}
+  if (!res.length) { try { res = await getJSON(base + 'q=' + encodeURIComponent((artist + ' ' + track).trim())); } catch (e) {} }
+  if (!res.length && track) { try { res = await getJSON(base + 'q=' + encodeURIComponent(track)); } catch (e) {} }
+  return res.filter(r => r.plainLyrics || r.syncedLyrics).slice(0, 6);
+}
+function parseLRC(lrc) {
+  const lines = [];
+  (lrc || '').split('\n').forEach(row => {
+    const tags = [...row.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    const text = row.replace(/\[[^\]]*\]/g, '').trim();
+    if (!tags.length || !text) return;
+    tags.forEach(t => { lines.push({ t: +t[1] * 60 + +t[2], text }); });
+  });
+  lines.sort((a, b) => a.t - b.t);
+  return { lyrics: lines.map(l => l.text).join('\n'), marks: lines.map(l => l.t) };
+}
+const TR_KEY = 'ingles-jake-tr';
+let trCache = {}; try { trCache = JSON.parse(localStorage.getItem(TR_KEY)) || {}; } catch (e) {}
+async function translate(text) {
+  const k = text.trim().toLowerCase(); if (!k) return '';
+  if (trCache[k]) return trCache[k];
+  const d = await getJSON('https://api.mymemory.translated.net/get?langpair=en|es&q=' + encodeURIComponent(text.slice(0, 480)));
+  if (d.quotaFinished) throw new Error('quota');
+  const out = (d.responseData && d.responseData.translatedText || '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  trCache[k] = out; try { localStorage.setItem(TR_KEY, JSON.stringify(trCache)); } catch (e) {}
+  return out;
+}
+function cleanLyrics(txt) { return (txt || '').replace(/\r/g, '').split('\n').map(x => x.trim()).filter(Boolean).join('\n'); }
+function fmtDur(d) { return d ? ' · ' + Math.floor(d / 60) + ':' + String(Math.round(d % 60)).padStart(2, '0') : ''; }
+
+/* ---------- Agregar canción: desde link o desde archivo ---------- */
+let SA = { mode: 'link' };
+SCREENS.songAdd = () => {
+  const tabs = `<div class="tabs"><button data-samode="link" class="${SA.mode === 'link' ? 'sel' : ''}">🔗 Desde un link</button><button data-samode="file" class="${SA.mode === 'file' ? 'sel' : ''}">📁 Subir archivo</button></div>`;
+  if (SA.mode === 'link') {
+    $app.innerHTML = `${topBar(null, 'songs')}<h1>Agregar canción</h1>${tabs}
+      <div class="card"><label class="small"><b>Pega el link de la canción</b></label>
+        <p class="small muted">YouTube, YouTube Music, Spotify o cualquier página de la canción.</p>
+        <div class="row"><input type="text" id="sa-url" placeholder="https://www.youtube.com/watch?v=..." value="${esc(SA.url || '')}" autocomplete="off"><button class="btn sm" id="sa-find">Buscar</button></div>
+        <div id="sa-status" class="small muted mt"></div></div>
+      <div id="sa-found"></div>`;
+    document.getElementById('sa-find').onclick = songFind;
+    document.getElementById('sa-url').onkeydown = e => { if (e.key === 'Enter') songFind(); };
+  } else {
+    $app.innerHTML = `${topBar(null, 'songs')}<h1>Agregar canción</h1>${tabs}
+      <div class="card">
+        <label class="small"><b>Archivo de audio</b> (mp3, m4a, wav)</label><input type="file" id="sa-file" accept="audio/*" class="mt">
+        <label class="small mt" style="display:block"><b>Nombre de la canción</b></label><input type="text" id="sa-title" placeholder="Ej. My favorite song">
+        <label class="small mt" style="display:block"><b>Artista</b></label><input type="text" id="sa-artist" placeholder="Para buscar la letra automáticamente">
+        <button class="btn ghost block mt" id="sa-auto">🔎 Buscar la letra automáticamente</button>
+        <label class="small mt" style="display:block"><b>Letra en inglés</b></label>
+        <textarea id="sa-lyrics" rows="9" placeholder="Pega aquí la letra o búscala con el botón de arriba..."></textarea>
+        <label class="small mt" style="display:block"><b>Traducción al español</b> (opcional; también la puedo traducir yo)</label>
+        <textarea id="sa-tr" rows="4" placeholder="Si tienes la traducción, pégala aquí, mismo orden de líneas."></textarea>
+      </div>
+      <button class="btn block red" id="sa-save">Guardar canción</button>`;
+    const f = document.getElementById('sa-file');
+    let autoMarks = [];
+    f.onchange = () => {
+      const t = document.getElementById('sa-title'), a = document.getElementById('sa-artist');
+      if (f.files[0] && !t.value) { const c = cleanSongTitle(f.files[0].name.replace(/\.[^.]+$/, ''), ''); t.value = c.track; if (!a.value) a.value = c.artist; }
+    };
+    document.getElementById('sa-auto').onclick = async () => {
+      const b = document.getElementById('sa-auto'); b.textContent = '🔎 Buscando...';
+      const res = await searchLyrics(document.getElementById('sa-artist').value.trim(), document.getElementById('sa-title').value.trim());
+      if (!res.length) { b.textContent = '😕 No la encontré, revisa el nombre y el artista'; return; }
+      const r = res[0]; const syn = r.syncedLyrics ? parseLRC(r.syncedLyrics) : null;
+      document.getElementById('sa-lyrics').value = syn && syn.lyrics ? syn.lyrics : cleanLyrics(r.plainLyrics);
+      autoMarks = syn ? syn.marks : [];
+      b.textContent = `✅ Letra encontrada: ${r.trackName} · ${r.artistName}${syn ? ' (con tiempos)' : ''}`;
+    };
+    document.getElementById('sa-lyrics').oninput = () => { autoMarks = []; };
+    document.getElementById('sa-save').onclick = async () => {
+      const title = document.getElementById('sa-title').value.trim();
+      const lyrics = cleanLyrics(document.getElementById('sa-lyrics').value);
+      if (!title) return toast('Ponle nombre a la canción');
+      if (!lyrics) return toast('Pega o busca la letra de la canción');
+      const s = { id: Date.now(), title, artist: document.getElementById('sa-artist').value.trim(), lyrics,
+        tr: document.getElementById('sa-tr').value.replace(/\r/g, '').split('\n').map(x => x.trim()).filter(Boolean),
+        audio: f.files[0] || null, marks: autoMarks, notes: '', provider: 'file' };
+      try { await songPut(s); toast('🎵 ¡Canción guardada!'); openSong(s.id); }
+      catch (e) { toast('No se pudo guardar. ¿El archivo es muy grande?'); }
+    };
+  }
+  $app.querySelectorAll('[data-samode]').forEach(b => b.onclick = () => { SA.mode = b.dataset.samode; SCREENS.songAdd(); });
+};
+async function songFind() {
+  const url = document.getElementById('sa-url').value.trim(); SA.url = url;
+  const p = parseSongUrl(url);
+  const st = document.getElementById('sa-status');
+  if (!p) { st.textContent = 'Ese link no parece válido. Cópialo completo desde la app o el navegador.'; return; }
+  st.textContent = '🔎 Viendo qué canción es...';
+  const info = await identifySong(p);
+  SA.p = p; SA.artist = info.artist; SA.track = info.track; SA.raw = info.raw;
+  await songLyricsStep();
+}
+async function songLyricsStep() {
+  const st = document.getElementById('sa-status');
+  st.innerHTML = SA.raw ? `Encontré: <b>${esc(SA.raw)}</b>. Buscando la letra...` : 'No pude leer el nombre desde el link. Escríbelo abajo y busca la letra.';
+  const res = SA.track ? await searchLyrics(SA.artist, SA.track) : [];
+  if (screen !== 'songAdd') return;
+  SA.results = res;
+  st.innerHTML = SA.raw ? `Encontré: <b>${esc(SA.raw)}</b>` : '';
+  document.getElementById('sa-found').innerHTML = `<div class="card"><h3>¿Es esta canción?</h3>
+    <div class="grid2"><div><label class="small">Artista</label><input type="text" id="sa-artist" value="${esc(SA.artist || '')}"></div><div><label class="small">Canción</label><input type="text" id="sa-track" value="${esc(SA.track || '')}"></div></div>
+    <button class="btn ghost block mt" id="sa-again">🔎 Buscar letra con estos datos</button>
+    ${res.length ? `<p class="small mt"><b>Elige la versión correcta:</b></p>${res.map((r, i) => `<button class="lesson-row" data-pick="${i}"><span class="dot">${r.syncedLyrics ? '⏱️' : '📝'}</span><span class="grow"><b>${esc(r.trackName)}</b><br><span class="small muted">${esc(r.artistName)}${r.albumName ? ' · ' + esc(r.albumName) : ''}${fmtDur(r.duration)}${r.syncedLyrics ? ' · letra sincronizada' : ''}</span></span><span>›</span></button>`).join('')}
+      <p class="small muted">⏱️ = la letra viene con tiempos: cada verso se ilumina solo mientras suena (con links de YouTube).</p>`
+      : `<p class="small mt">😕 No encontré la letra automáticamente. Revisa el nombre y busca otra vez, o pégala tú:</p>
+      <textarea id="sa-lyrics" rows="8" placeholder="Pega aquí la letra..."></textarea><button class="btn block red mt" id="sa-manual">Guardar con esta letra</button>`}</div>`;
+  document.getElementById('sa-again').onclick = () => { SA.artist = document.getElementById('sa-artist').value.trim(); SA.track = document.getElementById('sa-track').value.trim(); songLyricsStep(); };
+  document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    const r = SA.results[+b.dataset.pick];
+    const syn = r.syncedLyrics ? parseLRC(r.syncedLyrics) : null;
+    const lyrics = syn && syn.lyrics ? syn.lyrics : cleanLyrics(r.plainLyrics);
+    saveLinkSong(r.trackName, r.artistName, lyrics, syn ? syn.marks : []);
+  });
+  const man = document.getElementById('sa-manual');
+  if (man) man.onclick = () => {
+    const lyrics = cleanLyrics(document.getElementById('sa-lyrics').value);
+    if (!lyrics) return toast('Pega la letra de la canción');
+    saveLinkSong(document.getElementById('sa-track').value.trim() || 'Mi canción', document.getElementById('sa-artist').value.trim(), lyrics, []);
+  };
+}
+async function saveLinkSong(title, artist, lyrics, marks) {
+  const p = SA.p;
+  const s = { id: Date.now(), title, artist, lyrics, tr: [], audio: null, marks, notes: '', url: p.url, provider: p.provider, videoId: p.provider === 'youtube' ? p.id : null, spotifyId: p.provider === 'spotify' ? p.id : null };
+  await songPut(s); SA = { mode: 'link' }; toast('🎵 ¡Canción agregada!'); openSong(s.id);
+}
+
+/* ---------- Reproductor (archivo, YouTube o Spotify) ---------- */
+let SG = null, ytApi = null, songTick = null;
+function loadYT() {
+  if (ytApi) return ytApi;
+  ytApi = new Promise(res => {
+    if (window.YT && YT.Player) return res();
+    window.onYouTubeIframeAPIReady = () => res();
+    const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(sc);
+  });
+  return ytApi;
+}
+async function openSong(id) {
+  const list = await songsAll(); const song = list.find(s => s.id === id);
+  if (!song) return go('songs');
+  if (SG && SG.url) URL.revokeObjectURL(SG.url);
+  SG = { song, url: song.audio ? URL.createObjectURL(song.audio) : null, tab: 'letra', open: -1, stopAt: null, sync: -1, P: null };
+  go('song');
+}
+// SG.P = control uniforme del reproductor: time(), seek(t), play(), pause(), paused()
+function makePlayer() {
+  const s = SG.song;
+  if (SG.url) {
+    const au = document.getElementById('au');
+    SG.P = { time: () => au.currentTime, seek: t => { au.currentTime = t; }, play: () => au.play(), pause: () => au.pause(), paused: () => au.paused };
+  } else if (s.videoId) {
+    loadYT().then(() => {
+      if (screen !== 'song' || !document.getElementById('yt')) return;
+      const pl = new YT.Player('yt', { videoId: s.videoId, width: '100%', height: '200', playerVars: { playsinline: 1, rel: 0 },
+        events: { onReady: () => { SG.P = { time: () => pl.getCurrentTime() || 0, seek: t => pl.seekTo(t, true), play: () => pl.playVideo(), pause: () => pl.pauseVideo(), paused: () => pl.getPlayerState() !== 1 }; if (SG.tab === 'sync') renderSongBody(); } } });
+    });
+  }
+  clearInterval(songTick);
+  songTick = setInterval(() => {
+    if (screen !== 'song') { clearInterval(songTick); return; }
+    const P = SG.P; if (!P) return;
+    const t = P.time();
+    if (SG.stopAt != null && t >= SG.stopAt) { P.pause(); SG.stopAt = null; }
+    if (SG.tab !== 'letra') return;
+    let cur = -1; s.marks.forEach((m, i) => { if (m != null && t >= m) cur = i; });
+    if (cur !== SG.cur) {
+      SG.cur = cur;
+      $app.querySelectorAll('[data-line]').forEach(d => d.classList.toggle('now', +d.dataset.line === cur));
+      const el = $app.querySelector(`[data-line="${cur}"]`);
+      if (el && SG.follow && !P.paused()) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, 250);
+}
+function playLine(i) {
+  const s = SG.song, P = SG.P;
+  if (P && s.marks[i] != null) { P.seek(s.marks[i]); SG.stopAt = s.marks[i + 1] != null ? s.marks[i + 1] : null; P.play(); }
+  else speak(s.lyrics.split('\n')[i], 'lento');
+}
+SCREENS.song = () => {
+  const s = SG.song;
+  let player = '<p class="small muted mb0">Sin audio: escucha cada verso con la voz de Jake.</p>';
+  if (SG.url) player = `<audio id="au" controls src="${SG.url}" style="width:100%"></audio>`;
+  else if (s.videoId) player = `<div style="border-radius:12px;overflow:hidden;background:#000"><div id="yt"></div></div>`;
+  else if (s.spotifyId) player = `<iframe src="https://open.spotify.com/embed/track/${esc(s.spotifyId)}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:12px"></iframe>
+    <p class="small muted mt mb0">Con Spotify no puedo mover la canción a cada verso. Para que la letra se ilumine sola, agrega la misma canción con un link de YouTube.</p>`;
+  else if (s.url) player = `<a class="btn ghost block" href="${esc(s.url)}" target="_blank" rel="noopener">▶ Abrir la canción</a>`;
+  $app.innerHTML = `${topBar(null, 'songs')}
+    <div class="card"><h2 class="mb0">🎵 ${esc(s.title)}</h2><p class="muted small">${esc(s.artist || '')}</p>${player}</div>
+    <div class="tabs" id="song-tabs"></div>
+    <div id="song-body"></div>
+    <button class="btn plain block mt" id="sdel">🗑️ Borrar esta canción</button>`;
+  document.getElementById('sdel').onclick = async () => { if (confirm('¿Borrar "' + s.title + '"?')) { await songDel(s.id); go('songs'); } };
+  SG.cur = -2; SG.follow = true;
+  makePlayer();
+  renderSongBody();
+};
+function renderSongBody() {
+  const s = SG.song, lines = s.lyrics.split('\n'), all = findAllExpr(s.lyrics);
+  s.tr = s.tr || [];
+  const synced = s.marks.filter(m => m != null).length;
+  const canSync = !!(SG.url || s.videoId);
+  const tabs = [['letra', '📝 Letra'], ['expr', `💡 Expresiones (${all.length})`], ['quiz', '✍️ Ejercicio'], ['sync', '⏱️ Sincronizar']];
+  document.getElementById('song-tabs').innerHTML = tabs.map(([k, t]) => `<button data-tab="${k}" class="${SG.tab === k ? 'sel' : ''}">${t}</button>`).join('');
+  let body = '';
+  if (SG.tab === 'letra') {
+    const missing = lines.filter((l, i) => !s.tr[i]).length;
+    body = `<div class="card"><p class="small muted mb0">Lo marcado en <span class="expr">amarillo</span> son expresiones que te explico (phrasal verbs, slang, groserías, modismos). Toca un verso para escucharlo, ver su explicación y su traducción.</p>
+        ${missing ? `<button class="btn ghost block mt" id="tr-all">🌐 Traducir toda la canción al español</button>` : '<p class="small mt mb0">✅ Canción traducida. La traducción aparece al tocar cada verso.</p>'}
+        <div id="tr-st" class="small muted mt"></div></div>
+      <div class="card">${lines.map((l, i) => {
+        const hits = findExpr(l), tr = s.tr[i];
+        const open = SG.open === i;
+        const words = [...new Set(l.split(/\s+/).map(w => w.replace(/^[^a-z'’]+|[^a-z'’]+$/gi, '')).filter(w => w.length > 1))];
+        return `<div class="lyric" data-line="${i}"><div>${markLine(l)}</div>${tr && open ? `<div class="tr">🇲🇽 ${esc(tr)}</div>` : ''}
+          ${open ? `<div class="tip mt small">${hits.length ? hits.map(h => `<p class="mb0"><b>${esc(h.txt)}</b> <span class="tag amber">${TYPE_NAMES[h.e.type]}</span><br>${esc(h.e.es)}</p>`).join('<hr style="border:0;border-top:1px solid #f0dcb4">') : '<p class="mb0">No hay expresiones especiales en este verso.</p>'}
+            <p class="mt mb0"><b>Toca una palabra para ver qué significa:</b></p>
+            <div class="row wrap mt">${words.map(w => `<button class="say" data-word="${esc(w)}">${esc(w)}</button>`).join('')}</div>
+            <div id="wbox" class="mt"></div>
+            <div class="row wrap mt">${sayBtn(l, '🐢 Escuchar lento', 'lento')}${tr ? '' : `<button class="say" data-trline="${i}">🌐 Traducir verso</button>`}</div></div>` : ''}
+        </div>`;
+      }).join('')}</div>
+      <p class="small muted">🌐 La traducción de versos y palabras es automática y puede fallar con slang; los significados en amarillo están revisados a mano.</p>
+      <div class="card"><h3>📝 Mis notas: ¿de qué trata la canción?</h3><textarea id="notes" rows="3" placeholder="Escribe con tus palabras de qué crees que habla la canción y compáralo con la traducción.">${esc(s.notes || '')}</textarea></div>`;
+  } else if (SG.tab === 'expr') {
+    const groups = {}; all.forEach(x => (groups[x.e.type] = groups[x.e.type] || []).push(x));
+    const help = { phrasal: 'Verbo + palabrita que cambia el significado. Apréndelo como una sola palabra.', reduccion: 'Así se escribe cuando se canta o se habla rápido. Te digo la forma completa.', groseria: 'Fuerza: 🟢 suave · 🟡 media · 🔴 fuerte · ⛔ insulto grave (no lo uses).' };
+    body = all.length ? Object.keys(TYPE_NAMES).filter(t => groups[t]).map(t => `<div class="card"><h3>${TYPE_NAMES[t]}</h3>
+      ${help[t] ? `<p class="small muted">${help[t]}</p>` : ''}
+      ${groups[t].map(x => `<div class="list-item" style="align-items:flex-start"><div class="grow"><b>${esc(x.e.k)}</b> — ${esc(x.e.es)}<br><span class="small muted">"${esc(x.line)}"</span></div>
+        <div class="row">${sayBtn(x.e.k, '▶')}<button class="say" data-addcard="${esc(x.e.k)}">${(S.customCards || []).some(c => c.en === x.e.k) ? '✓' : '+🧠'}</button></div></div>`).join('')}</div>`).join('')
+      + '<p class="small muted">+🧠 = agregar a tus tarjetas de Memoria.</p>'
+      : '<div class="card"><p class="mb0">No encontré expresiones conocidas en esta letra. Aun así puedes usar el ejercicio y la traducción por verso.</p></div>';
+  } else if (SG.tab === 'quiz') {
+    if (!SG.quiz) {
+      const cand = lines.map((l, i) => ({ l, i })).filter(x => x.l.split(/\s+/).length >= 4);
+      SG.quiz = { items: shuffle(cand).slice(0, 8).sort((a, b) => a.i - b.i).map(x => {
+        const hits = findExpr(x.l);
+        const words = x.l.split(/\s+/);
+        let target = hits.length ? hits[0].txt.split(/\s+/)[0] : words.slice().sort((a, b) => b.replace(/[^a-z]/gi, '').length - a.replace(/[^a-z]/gi, '').length)[0];
+        target = target.replace(/^[^a-z'’]+|[^a-z'’]+$/gi, '');
+        return { i: x.i, line: x.l, target };
+      }), k: 0, ok: 0, answered: false };
+    }
+    const Q = SG.quiz;
+    if (!Q.items.length) body = '<div class="card"><p class="mb0">La letra es muy corta para el ejercicio.</p></div>';
+    else if (Q.k >= Q.items.length) body = `<div class="card center"><h2>¡Ejercicio terminado!</h2><div class="big">${Q.ok}/${Q.items.length}</div>
+      <p>Ahora lee la traducción en la pestaña Letra y compárala con tus notas.</p><button class="btn" id="qagain">Otra vez</button></div>`;
+    else {
+      const it = Q.items[Q.k];
+      const re = new RegExp(it.target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const blank = esc(it.line).replace(esc(it.target), '<b>_____</b>');
+      body = `<div class="card"><p class="small muted">Verso ${Q.k + 1} de ${Q.items.length}. Escucha y escribe la palabra que falta.</p>
+        <p style="font-size:1.15rem">${re.test(it.line) ? blank : esc(it.line)}</p>
+        <div class="row wrap">${s.marks[it.i] != null && canSync ? '<button class="say" id="qplay">▶ Escuchar en la canción</button>' : ''}${sayBtn(it.line, '🐢 Escuchar a Jake', 'lento')}</div>
+        <div class="row mt"><input type="text" id="qin" placeholder="Palabra que falta" autocomplete="off"><button class="btn sm" id="qok">Revisar</button></div><div id="qfb"></div></div>`;
+    }
+  } else if (SG.tab === 'sync') {
+    body = canSync ? `<div class="card"><h3>Sincroniza la letra con la canción</h3>
+      ${synced ? `<p class="small">✅ Esta canción ya tiene ${synced} de ${lines.length} versos sincronizados. Solo vuelve a hacerlo si no coinciden.</p>` : '<p class="small">Así cada verso se ilumina mientras suena y puedes repetir solo esa parte.</p>'}
+      <p class="small">Dale play y toca el botón grande <b>justo cuando empiece cada verso</b>.</p>
+      ${!SG.P ? '<p class="small muted">Cargando el reproductor...</p>' : SG.sync < 0 ? '<button class="btn block red" id="sstart">▶ Empezar a sincronizar</button>' : `
+        <p class="small muted mb0">Siguiente verso:</p><p class="en" id="snext" style="font-size:1.15rem">${esc(lines[SG.sync] || '')}</p>
+        <button class="btn block green" id="smark" style="min-height:72px;font-size:1.1rem">👆 Empieza este verso (${SG.sync + 1}/${lines.length})</button>
+        <button class="btn block ghost mt" id="sstop">Terminar</button>`}</div>`
+      : '<div class="card"><p class="mb0">Para sincronizar necesito poder controlar la canción: usa un archivo de audio o un link de YouTube.</p></div>';
+  }
+  const bodyEl = document.getElementById('song-body'); bodyEl.innerHTML = body;
+  bindSongBody(s, lines);
+}
+function bindSongBody(s, lines) {
+  const bodyEl = document.getElementById('song-body');
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { SG.tab = b.dataset.tab; SG.open = -1; SG.cur = -2; renderSongBody(); });
+  bodyEl.querySelectorAll('[data-line]').forEach(d => d.onclick = e => {
+    if (e.target.closest('.say,a,button')) return;
+    const i = +d.dataset.line; SG.open = SG.open === i ? -1 : i; SG.cur = -2; SG.follow = false; renderSongBody(); playLine(i);
+  });
+  bodyEl.querySelectorAll('[data-word]').forEach(b => b.onclick = async () => {
+    const w = b.dataset.word, box = document.getElementById('wbox');
+    speak(w, 'normal');
+    const known = EXPRESSIONS.find(e => !e.k.includes(' ') && e.re.test(' ' + w + ' '));
+    box.innerHTML = `<p class="mb0"><b>${esc(w)}</b>${known ? ` <span class="tag amber">${TYPE_NAMES[known.type]}</span> — ${esc(known.es)}` : ''} <span id="wtr" class="muted">· traduciendo...</span></p>`;
+    try { const t = await translate(w); const el = document.getElementById('wtr'); if (el) el.textContent = '· 🌐 ' + t; }
+    catch (e) { const el = document.getElementById('wtr'); if (el) el.textContent = '· (sin conexión para traducir)'; }
+  });
+  bodyEl.querySelectorAll('[data-trline]').forEach(b => b.onclick = async () => {
+    const i = +b.dataset.trline; b.textContent = '🌐 Traduciendo...';
+    try { s.tr[i] = await translate(lines[i]); await songPut(s); renderSongBody(); }
+    catch (e) { b.textContent = e.message === 'quota' ? 'Se acabaron las traducciones de hoy' : 'Sin conexión'; }
+  });
+  const ta = document.getElementById('tr-all');
+  if (ta) ta.onclick = async () => {
+    ta.disabled = true; const st = document.getElementById('tr-st');
+    for (let i = 0; i < lines.length; i++) {
+      if (s.tr[i]) continue;
+      st.textContent = `Traduciendo verso ${i + 1} de ${lines.length}...`;
+      try { s.tr[i] = await translate(lines[i]); }
+      catch (e) { st.textContent = e.message === 'quota' ? 'Se acabó el límite gratis de traducciones de hoy. Mañana sigo con el resto.' : 'Sin conexión. Intenta de nuevo.'; break; }
+    }
+    await songPut(s); if (screen === 'song' && SG.tab === 'letra') renderSongBody();
+  };
+  bodyEl.querySelectorAll('[data-addcard]').forEach(b => b.onclick = () => {
+    const k = b.dataset.addcard; S.customCards = S.customCards || [];
+    if (!S.customCards.some(c => c.en === k)) {
+      const e = EXPRESSIONS.find(x => x.k === k);
+      S.customCards.push({ id: 'song|' + k, en: k, es: e ? e.es : '', pr: '', tip: '', from: s.title }); save(); toast('Agregada a Memoria 🧠');
+    }
+    b.textContent = '✓';
+  });
+  const notes = document.getElementById('notes'); if (notes) notes.onchange = () => { s.notes = notes.value; songPut(s); };
+  const qa = document.getElementById('qagain'); if (qa) qa.onclick = () => { SG.quiz = null; renderSongBody(); };
+  const qok = document.getElementById('qok');
+  if (qok) {
+    const Q = SG.quiz, it = Q.items[Q.k];
+    const qp = document.getElementById('qplay'); if (qp) qp.onclick = () => playLine(it.i);
+    const check = () => {
+      if (Q.answered) { Q.k++; Q.answered = false; renderSongBody(); return; }
+      const v = document.getElementById('qin').value.trim().toLowerCase().replace(/[’]/g, "'").replace(/[^a-z']/g, '');
+      const ok = v === it.target.toLowerCase().replace(/[’]/g, "'").replace(/[^a-z']/g, '');
+      Q.answered = true; if (ok) Q.ok++; updSkill('listening', ok, 0.08); save();
+      const hits = findExpr(it.line);
+      document.getElementById('qfb').innerHTML = `<div class="tip mt">${ok ? '✅ ¡Exacto!' : `❌ Era: <b>${esc(it.target)}</b>`}<br><span class="small">${markLine(it.line)}</span>
+        ${hits.length ? `<br><span class="small">💡 <b>${esc(hits[0].txt)}</b>: ${esc(hits[0].e.es)}</span>` : ''}${s.tr[it.i] ? `<br><span class="small">🇲🇽 ${esc(s.tr[it.i])}</span>` : ''}</div>`;
+      qok.textContent = 'Siguiente';
+    };
+    qok.onclick = check;
+    document.getElementById('qin').onkeydown = e => { if (e.key === 'Enter') check(); };
+  }
+  const ss = document.getElementById('sstart');
+  if (ss) ss.onclick = () => { s.marks = []; SG.sync = 0; renderSongBody(); SG.P.seek(0); SG.P.play(); };
+  const sm = document.getElementById('smark');
+  if (sm) {
+    sm.onclick = () => {
+      s.marks[SG.sync] = Math.max(0, SG.P.time() - 0.2); SG.sync++;
+      if (SG.sync >= lines.length) { SG.sync = -1; songPut(s); toast('✅ ¡Letra sincronizada!'); SG.tab = 'letra'; renderSongBody(); return; }
+      document.getElementById('snext').textContent = lines[SG.sync];
+      sm.textContent = `👆 Empieza este verso (${SG.sync + 1}/${lines.length})`;
+    };
+    document.getElementById('sstop').onclick = () => { SG.sync = -1; songPut(s); renderSongBody(); };
+  }
+}
+
 /* ========================================================= */
 go(S.level ? 'home' : (S.profile ? 'testIntro' : 'welcome'));
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
+<script src="ai.js"></script>
+<script src="texting.js"></script>
+<script src="groserias.js"></script>
+<script src="explain.js"></script>
+<script src="fun.js"></script>
+<script src="songs2.js"></script>
+<script src="context.js"></script>
+<script src="zero.js"></script>
+<script src="street.js"></script>
+<script src="integrate.js"></script>
 </body>
 </html>
